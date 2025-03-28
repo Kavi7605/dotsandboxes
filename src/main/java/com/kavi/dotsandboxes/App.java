@@ -38,7 +38,10 @@ import com.google.auth.oauth2.IdTokenProvider;
 import com.google.auth.oauth2.UserCredentials;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collections;
+import java.awt.Desktop;
 
 
 public class App extends Application {  
@@ -498,29 +501,19 @@ public class App extends Application {
     }
 
     public void signInWithGoogle() {
+        String clientId = "300597737355-eplaej8tclce6hf34kvje4dcejgn7upc.apps.googleusercontent.com"; // Your Firebase Client ID
+        String redirectUri = "http://localhost"; // Used to capture response (for local apps)
+        String authUrl = "https://accounts.google.com/o/oauth2/auth" +
+                        "?client_id=" + clientId +
+                        "&redirect_uri=" + redirectUri +
+                        "&response_type=code" +
+                        "&scope=email%20profile%20openid";
+        
         try {
-            FileInputStream serviceAccount = new FileInputStream("src/main/resources/dotsandboxeslogin-c093f-firebase-adminsdk-fbsvc-8c1d3643e2.json");
-    
-            GoogleCredentials credentials = GoogleCredentials
-                    .fromStream(serviceAccount)
-                    .createScoped(Collections.singletonList("https://www.googleapis.com/auth/userinfo.email"));
-    
-            credentials.refreshIfExpired();
-            IdToken idToken = ((IdTokenProvider) credentials).idTokenWithAudience(
-                    "300597737355-eplaej8tclce6hf34kvje4dcejgn7upc.apps.googleusercontent.com",  // Replace with your Firebase Client ID
-                    null
-            );
-    
-            if (idToken != null) {
-                System.out.println("✅ User authenticated successfully!");
-                System.out.println("ID Token: " + idToken.getTokenValue());
-            } else {
-                System.out.println("❌ Google Sign-In failed.");
-            }
-    
-        } catch (IOException e) {
+            // Open the Google login page in the default browser
+            Desktop.getDesktop().browse(new URI(authUrl));
+        } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
-            System.out.println("❌ Error during Google Sign-In: " + e.getMessage());
         }
     }    
 }
