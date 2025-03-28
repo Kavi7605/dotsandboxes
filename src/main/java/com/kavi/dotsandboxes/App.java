@@ -67,7 +67,7 @@ public class App extends Application {
     // This method initializes the primary stage and sets the main menu scene as the initial scene.
     @Override
     public void start(Stage primaryStage) {
-        // FirebaseInitializer.initialize();
+        FirebaseInitializer.initialize();
         this.primaryStage = primaryStage;
         mainMenuScene = createMainMenuScene();
         primaryStage.setTitle("Dots and Boxes"); 

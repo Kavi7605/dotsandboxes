@@ -1,25 +1,25 @@
 package com.kavi.dotsandboxes;
 
-import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 
 public class FirebaseInitializer {
-    public static void main(String[] args) {
+    public static void initialize() {
         try {
-            FileInputStream serviceAccount = new FileInputStream("path/to/your/serviceAccountKey.json");
+            FileInputStream serviceAccount = new FileInputStream("src/main/resources/google-services.json");
 
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+            FirebaseOptions options = FirebaseOptions.builder()
+                .setCredentials(com.google.auth.oauth2.GoogleCredentials.fromStream(serviceAccount))
                 .build();
 
-            FirebaseApp.initializeApp(options);
-            System.out.println("Firebase Initialized Successfully!");
-        } catch (Exception e) {
-            e.printStackTrace();
+            if (FirebaseApp.getApps().isEmpty()) {
+                FirebaseApp.initializeApp(options);
+                System.out.println("✅ Firebase initialized successfully!");
+            }
+        } catch (IOException e) {
+            System.err.println("❌ Firebase initialization failed: " + e.getMessage());
         }
     }
 }
