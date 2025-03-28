@@ -73,7 +73,7 @@ public class App extends Application {
         primaryStage.setScene(mainMenuScene);     
         primaryStage.setMaximized(true);
         primaryStage.show();
-        primaryStage.getIcons().add(new Image("icon.png"));
+        // primaryStage.getIcons().add(new Image("icon.png"));
     }
 
     // Create main menu scene
