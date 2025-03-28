@@ -32,6 +32,14 @@ import javafx.scene.effect.BlurType;
 import javafx.animation.Timeline;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.IdToken;
+import com.google.auth.oauth2.IdTokenProvider;
+import com.google.auth.oauth2.UserCredentials;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Collections;
+
 
 public class App extends Application {  
     //class variable definitions
@@ -67,7 +75,7 @@ public class App extends Application {
     // This method initializes the primary stage and sets the main menu scene as the initial scene.
     @Override
     public void start(Stage primaryStage) {
-        FirebaseInitializer.initialize();
+        // FirebaseInitializer.initialize();
         this.primaryStage = primaryStage;
         mainMenuScene = createMainMenuScene();
         primaryStage.setTitle("Dots and Boxes"); 
@@ -119,10 +127,16 @@ public class App extends Application {
         Button quitButton = new Button("Exit");
         styleButton(quitButton, "#F44336", "#D32F2F");
         
+        Button googleLoginButton = new Button("Login with Google");
+        googleLoginButton.setOnAction(e -> {
+            System.out.println("Google Login button clicked!"); // Debugging step
+            signInWithGoogle();
+        });
+        
         playButton.setOnAction(event -> primaryStage.setScene(optionScene()));
         quitButton.setOnAction(event -> primaryStage.close());
 
-        center.getChildren().addAll(titleLabel, subtitleLabel, playButton, quitButton);
+        center.getChildren().addAll(googleLoginButton, titleLabel, subtitleLabel, playButton, quitButton);
 
         return new Scene(center, screenSize.getWidth(), screenSize.getHeight());
     } 
@@ -482,4 +496,31 @@ public class App extends Application {
         player1ScoreLabel.setText(String.valueOf(player1.getScore()));
         player2ScoreLabel.setText(String.valueOf(player2.getScore()));
     }
+
+    public void signInWithGoogle() {
+        try {
+            FileInputStream serviceAccount = new FileInputStream("src/main/resources/dotsandboxeslogin-c093f-firebase-adminsdk-fbsvc-8c1d3643e2.json");
+    
+            GoogleCredentials credentials = GoogleCredentials
+                    .fromStream(serviceAccount)
+                    .createScoped(Collections.singletonList("https://www.googleapis.com/auth/userinfo.email"));
+    
+            credentials.refreshIfExpired();
+            IdToken idToken = ((IdTokenProvider) credentials).idTokenWithAudience(
+                    "300597737355-eplaej8tclce6hf34kvje4dcejgn7upc.apps.googleusercontent.com",  // Replace with your Firebase Client ID
+                    null
+            );
+    
+            if (idToken != null) {
+                System.out.println("✅ User authenticated successfully!");
+                System.out.println("ID Token: " + idToken.getTokenValue());
+            } else {
+                System.out.println("❌ Google Sign-In failed.");
+            }
+    
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("❌ Error during Google Sign-In: " + e.getMessage());
+        }
+    }    
 }
