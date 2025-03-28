@@ -8,23 +8,18 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 public class FirebaseInitializer {
-    public static void initialize() {
+    public static void main(String[] args) {
         try {
-            FileInputStream serviceAccount = new FileInputStream("src/main/resources/google-services.json");
+            FileInputStream serviceAccount = new FileInputStream("path/to/your/serviceAccountKey.json");
 
-            FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .build();
+            FirebaseOptions options = new FirebaseOptions.Builder()
+                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                .build();
 
-            if (FirebaseApp.getApps().isEmpty()) {
-                FirebaseApp.initializeApp(options);
-            }
-
+            FirebaseApp.initializeApp(options);
             System.out.println("Firebase Initialized Successfully!");
-
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("Firebase Initialization Failed!");
         }
     }
 }
