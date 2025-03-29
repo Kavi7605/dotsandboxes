@@ -2,6 +2,7 @@ package com.kavi.dotsandboxes;
 
 //Importing classes from JavaFX package
 import javafx.application.Application;
+import javafx.concurrent.Worker;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
@@ -21,6 +22,8 @@ import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.scene.web.WebView;
+import javafx.scene.web.WebEngine;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
@@ -124,6 +127,9 @@ public class App extends Application {
         subtitleLabel.setTextFill(Color.rgb(255, 255, 255, 0.8));
         subtitleLabel.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
 
+
+        Button FacebookLogin = new Button("Login with Facebook");
+
         Button playButton = new Button("Play Game");
         styleButton(playButton, "#4CAF50", "#388E3C");
         
@@ -139,7 +145,40 @@ public class App extends Application {
         playButton.setOnAction(event -> primaryStage.setScene(optionScene()));
         quitButton.setOnAction(event -> primaryStage.close());
 
-        center.getChildren().addAll(googleLoginButton, titleLabel, subtitleLabel, playButton, quitButton);
+        FacebookLogin.setOnAction(event -> {
+        String appId = "1380794913106553";
+        String redirectUri = "https://www.facebook.com/connect/login_success.html";
+        
+        String loginUrl = "https://www.facebook.com/v18.0/dialog/oauth?"
+                        + "client_id=" + appId
+                        + "&redirect_uri=" + redirectUri
+                        + "&scope=email,public_profile"
+                        + "&response_type=token";
+
+        // Open Facebook login in WebView
+        WebView webView = new WebView();
+        WebEngine webEngine = webView.getEngine();
+        Stage webStage = new Stage();
+        webStage.setScene(new Scene(webView, 600, 600));
+        webStage.show();
+
+        // Listen for redirect URL to extract access token
+        webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+            if (newState == Worker.State.SUCCEEDED) {
+                String url = webEngine.getLocation();
+                if (url.contains("access_token=")) {
+                    String accessToken = url.split("access_token=")[1].split("&")[0];
+                    webStage.close();
+                    fetchFacebookUserProfile(accessToken);
+                }
+            }
+        });
+
+        // Load Facebook login page
+        webEngine.load(loginUrl);
+    });
+
+        center.getChildren().addAll(googleLoginButton, FacebookLogin, titleLabel, subtitleLabel, playButton, quitButton);
 
         return new Scene(center, screenSize.getWidth(), screenSize.getHeight());
     } 
@@ -516,4 +555,21 @@ public class App extends Application {
             e.printStackTrace();
         }
     }    
+    public class FacebookLogin {
+        public static void addFacebookLoginButton(Stage stage, VBox root) {
+            Button fbLoginButton = new Button("Login with Facebook");
+    
+            fbLoginButton.setOnAction(e -> {
+                // Call Facebook authentication function
+                authenticateWithFacebook();
+            });
+    
+            root.getChildren().add(fbLoginButton);
+        }
+    
+        private static void authenticateWithFacebook() {
+            // Here, you need to integrate the Firebase Facebook Auth logic.
+            System.out.println("Facebook login clicked!");
+        }
+    }
 }

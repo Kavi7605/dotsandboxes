@@ -28,6 +28,7 @@
             <artifactId>firebase-admin</artifactId>
             <version>9.4.3</version>
         </dependency>
+        <!-- Removed firebase-auth dependency as it is included in firebase-admin -->
         
         <!-- Google OAuth Client -->
         <dependency>
