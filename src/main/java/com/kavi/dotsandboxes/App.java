@@ -22,7 +22,7 @@ import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.scene.web.WebView;
+import javafx.scene.web.WebView;    
 import javafx.scene.web.WebEngine;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -39,7 +39,10 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.IdToken;
 import com.google.auth.oauth2.IdTokenProvider;
 import com.google.auth.oauth2.UserCredentials;
-import java.io.FileInputStream;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;   
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -182,6 +185,31 @@ public class App extends Application {
 
         return new Scene(center, screenSize.getWidth(), screenSize.getHeight());
     } 
+
+    private void fetchFacebookUserProfile(String accessToken) {
+    String url = "https://graph.facebook.com/me?fields=id,name,email&access_token=" + accessToken;
+
+    try {
+        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("Accept", "application/json");
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        reader.close();
+
+        // Print or process the response
+        System.out.println("Facebook User Info: " + response.toString());
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
 
     // Create game settings scene
     // This method creates the game settings scene with text fields for entering player names and a combo box for selecting the grid size.
