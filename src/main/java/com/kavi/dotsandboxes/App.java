@@ -149,7 +149,7 @@ public class App extends Application {
         quitButton.setOnAction(event -> primaryStage.close());
 
         FacebookLogin.setOnAction(event -> {
-        String appId = "1380794913106553";
+        String appId = "1165954588586368";
         String redirectUri = "https://www.facebook.com/connect/login_success.html";
         
         String loginUrl = "https://www.facebook.com/v18.0/dialog/oauth?"
