@@ -62,13 +62,14 @@ public class GoogleAuthService {
                              "&redirect_uri=" + redirectUri +
                              "&response_type=code" +
                              "&scope=" + scope;
+            
+            // Open browser only once
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                 Desktop.getDesktop().browse(new URI(authUrl));
             } else {
                 System.err.println("Desktop browsing is not supported on this system.");
+                return; // Exit if browser can't be opened
             }
-                            
-            Desktop.getDesktop().browse(new URI(authUrl));
 
             // Step 3: Wait until we receive the authorization code
             while (LocalHttpServer.getAuthorizationCode() == null) {
