@@ -13,5 +13,6 @@
         "c:\\Kavi\\Work\\Degree\\Projects\\openjfx-22.0.2_windows-x64_bin-sdk\\lib\\javafx.fxml.jar",
         "c:\\Kavi\\Work\\Degree\\Projects\\openjfx-22.0.2_windows-x64_bin-sdk\\lib\\javafx-swt.jar"
     ],
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.compile.nullAnalysis.mode": "automatic"
 }
