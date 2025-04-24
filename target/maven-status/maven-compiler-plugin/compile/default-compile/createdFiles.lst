@@ -3,5 +3,6 @@ com\kavi\dotsandboxes\Player.class
 com\kavi\dotsandboxes\LocalHttpServer.class
 com\kavi\dotsandboxes\App$FacebookLogin.class
 com\kavi\dotsandboxes\FirebaseTest.class
+FirebaseInit.class
 com\kavi\dotsandboxes\TestServer.class
 com\kavi\dotsandboxes\GoogleAuthService.class
