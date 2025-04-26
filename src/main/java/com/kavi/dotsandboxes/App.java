@@ -48,9 +48,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
 import java.awt.Desktop;
+import javafx.application.Platform;
+import fi.iki.elonen.NanoHTTPD;
 
 
-public class App extends Application {  
+public class App extends Application implements LoginCallback{  
     //class variable definitions
     // This class defines the primary game elements for the Dots and Boxes game, 
     // including the stage, scenes, grid settings, players, UI elements, and game state tracking.
@@ -73,6 +75,7 @@ public class App extends Application {
     private Label player1ScoreLabel = new Label();
     private Label player2ScoreLabel = new Label();
     private int boxCounter;
+    private FacebookLoginHandler facebookLoginServer;
 
     // Main method to run the application
     // This method is the entry point for the JavaFX application.
@@ -91,6 +94,9 @@ public class App extends Application {
         primaryStage.setScene(mainMenuScene);     
         primaryStage.setMaximized(true);
         primaryStage.show();
+        primaryStage.setOnCloseRequest(event -> {
+            cleanupResources(); // Cleanup resources on close
+        });
         // primaryStage.getIcons().add(new Image("icon.png"));
     }
 
@@ -139,52 +145,48 @@ public class App extends Application {
         Button quitButton = new Button("Exit");
         styleButton(quitButton, "#F44336", "#D32F2F");
         
-        Button googleLoginButton = new Button("Login with Google");
-        googleLoginButton.setOnAction(e -> {
-            System.out.println("Google Login button clicked!"); // Debugging step
-            signInWithGoogle();
-        });
-        
         playButton.setOnAction(event -> primaryStage.setScene(optionScene()));
-        quitButton.setOnAction(event -> primaryStage.close());
+        quitButton.setOnAction(event -> cleanupResources());
 
         FacebookLogin.setOnAction(event -> {
-        String appId = "1165954588586368";
-        String redirectUri = "https://www.facebook.com/connect/login_success.html";
-        
-        String loginUrl = "https://www.facebook.com/v18.0/dialog/oauth?"
-                        + "client_id=" + appId
-                        + "&redirect_uri=" + redirectUri
-                        + "&scope=email,public_profile"
-                        + "&response_type=token";
-
-        // Open Facebook login in WebView
-        WebView webView = new WebView();
-        WebEngine webEngine = webView.getEngine();
-        Stage webStage = new Stage();
-        webStage.setScene(new Scene(webView, 600, 600));
-        webStage.show();
-
-        // Listen for redirect URL to extract access token
-        webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
-            if (newState == Worker.State.SUCCEEDED) {
-                String url = webEngine.getLocation();
-                if (url.contains("access_token=")) {
-                    String accessToken = url.split("access_token=")[1].split("&")[0];
-                    webStage.close();
-                    fetchFacebookUserProfile(accessToken);
-                }
-            }
+            facebookLoginServer = new FacebookLoginHandler(this);
+            facebookLoginServer.handleLogin();
         });
 
-        // Load Facebook login page
-        webEngine.load(loginUrl);
-    });
-
-        center.getChildren().addAll(googleLoginButton, FacebookLogin, titleLabel, subtitleLabel, playButton, quitButton);
+        center.getChildren().addAll(FacebookLogin, titleLabel, subtitleLabel, playButton, quitButton);
 
         return new Scene(center, screenSize.getWidth(), screenSize.getHeight());
     } 
+
+    @Override
+    public void onLoginFailed(String errorMessage) {
+        System.out.println("Login failed: " + errorMessage);
+        Platform.runLater(() -> {
+            // StackPane root = (StackPane) primaryStage.getScene().getRoot();
+            // root.getChildren().removeAll(dimOverlay, loadingBox);
+
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Login Failed");
+            alert.setHeaderText(null);
+            alert.setContentText("Error: " + errorMessage);
+            alert.showAndWait();
+        });
+    }
+
+    @Override
+    public void onLoginSuccessful() {
+        System.out.println("Login successful!");
+        Platform.runLater(() -> {
+            // StackPane root = (StackPane) primaryStage.getScene().getRoot();
+            // root.getChildren().removeAll(dimOverlay, loadingBox);
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Login Successful");
+            alert.setHeaderText(null);
+            alert.setContentText("You have successfully logged in!");
+            alert.showAndWait();
+        });
+    }
 
     private void fetchFacebookUserProfile(String accessToken) {
     String url = "https://graph.facebook.com/me?fields=id,name,email&access_token=" + accessToken;
@@ -567,22 +569,7 @@ public class App extends Application {
         player2ScoreLabel.setText(String.valueOf(player2.getScore()));
     }
 
-    public void signInWithGoogle() {
-        String clientId = "300597737355-eplaej8tclce6hf34kvje4dcejgn7upc.apps.googleusercontent.com"; // Your Firebase Client ID
-        String redirectUri = "http://localhost"; // Used to capture response (for local apps)
-        String authUrl = "https://accounts.google.com/o/oauth2/auth" +
-                        "?client_id=" + clientId +
-                        "&redirect_uri=" + redirectUri +
-                        "&response_type=code" +
-                        "&scope=email%20profile%20openid";
         
-        try {
-            // Open the Google login page in the default browser
-            Desktop.getDesktop().browse(new URI(authUrl));
-        } catch (IOException | URISyntaxException e) {
-            e.printStackTrace();
-        }
-    }    
     public class FacebookLogin {
         public static void addFacebookLoginButton(Stage stage, VBox root) {
             Button fbLoginButton = new Button("Login with Facebook");
@@ -599,5 +586,19 @@ public class App extends Application {
             // Here, you need to integrate the Firebase Facebook Auth logic.
             System.out.println("Facebook login clicked!");
         }
+        
+    }
+
+    private void cleanupResources() {
+        try {
+            if (facebookLoginServer != null) {
+                facebookLoginServer.stop();
+                facebookLoginServer = null;
+            }
+        } catch (Exception e) {
+            System.err.println("Error during cleanup: " + e.getMessage());
+        }
+        Platform.exit(); // Exit the JavaFX application
+        System.exit(0); // Exit the application        
     }
 }
