@@ -21,20 +21,55 @@ public class FacebookLoginHandler extends NanoHTTPD {
     private LoginCallback callback;
     private static final String FIREBASE_API_KEY = "AIzaSyAEiS8OlZVCvMpXiv1NuLExr4Bx7IwM-FE";
     private static final String FIREBASE_AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=" + FIREBASE_API_KEY;
+    private UserProfile userProfile;
 
     public FacebookLoginHandler(LoginCallback callback) {
         super(8080);
         this.callback = callback;
     }
     
+    public UserProfile getUserProfile() {
+        return userProfile;
+    }
+    
     public void handleLogin() {
         try {
-            start(NanoHTTPD.SOCKET_READ_TIMEOUT, false); // Start the NanoHTTPD server
+            if(!this.isAlive()) {
+                start(NanoHTTPD.SOCKET_READ_TIMEOUT, false); // Start the NanoHTTPD server
+            }
             String authUrl = getFacebookAuthorizationUrl();
             if (Desktop.isDesktopSupported()) {
                 Desktop.getDesktop().browse(new URI(authUrl)); // Open the auth URL in the default browser
             } else {
                 System.err.println("Desktop is not supported. Please open the following URL manually: " + authUrl);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void fetchUserProfile(String accessToken) {
+        try {
+            String profileUrl = "https://graph.facebook.com/me?fields=id,name,email&access_token=" + accessToken;
+            HttpURLConnection connection = (HttpURLConnection) new URL(profileUrl).openConnection();
+            connection.setRequestMethod("GET");
+            
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = in.readLine()) != null) {
+                    response.append(line);
+                }
+                in.close();
+
+                JsonObject jsonObject = JsonParser.parseString(response.toString()).getAsJsonObject();
+                String id = jsonObject.get("id").getAsString();
+                String name = jsonObject.get("name").getAsString();
+                String email = jsonObject.has("email") ? jsonObject.get("email").getAsString() : "";
+
+                userProfile = new UserProfile(id, name, email, accessToken);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -75,6 +110,7 @@ public class FacebookLoginHandler extends NanoHTTPD {
                 }
                 in.close();
                 System.out.println("\n------------Firebase ID Token Response: " + response.toString());
+                fetchUserProfile(accessToken);
                 callback.onLoginSuccessful(); // Notify the callback on success
                 // Handle the response to extract the ID token
             } else {
@@ -112,7 +148,7 @@ public class FacebookLoginHandler extends NanoHTTPD {
                         authenticateFacebookWithFirebase(facebookToken);
                     } else {
                         return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Failed to exchange code for access token.");
-                    }                   
+                    }                 
                     return newFixedLengthResponse(Response.Status.OK, "text/plain", "OAuth callback received. Code: " + code);
                 } else {
                     return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "Missing 'code' parameter.");

@@ -50,6 +50,19 @@ import java.util.Collections;
 import java.awt.Desktop;
 import javafx.application.Platform;
 import fi.iki.elonen.NanoHTTPD;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.scene.control.Tooltip;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.image.ImageView;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonArray;
 
 
 public class App extends Application implements LoginCallback{  
@@ -76,6 +89,15 @@ public class App extends Application implements LoginCallback{
     private Label player2ScoreLabel = new Label();
     private int boxCounter;
     private FacebookLoginHandler facebookLoginServer;
+    private Button profileButton;
+    private MenuButton profileMenu;
+    private UserProfile currentUserProfile;
+    private VBox friendsList;
+    private ScrollPane friendsScrollPane;
+    private boolean isLoggedIn = false;
+    private Button FacebookLogin;
+    private Timeline loginTimer;
+    private static final int LOGIN_TIMEOUT_SECONDS = 30;
 
     // Main method to run the application
     // This method is the entry point for the JavaFX application.
@@ -136,8 +158,10 @@ public class App extends Application implements LoginCallback{
         subtitleLabel.setTextFill(Color.rgb(255, 255, 255, 0.8));
         subtitleLabel.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
 
-
-        Button FacebookLogin = new Button("Login with Facebook");
+        FacebookLogin = new Button("Login with Facebook");
+        FacebookLogin.setOnAction(event -> {
+            startLoginProcess();
+        });
 
         Button playButton = new Button("Play Game");
         styleButton(playButton, "#4CAF50", "#388E3C");
@@ -148,15 +172,37 @@ public class App extends Application implements LoginCallback{
         playButton.setOnAction(event -> primaryStage.setScene(optionScene()));
         quitButton.setOnAction(event -> cleanupResources());
 
-        FacebookLogin.setOnAction(event -> {
-            facebookLoginServer = new FacebookLoginHandler(this);
-            facebookLoginServer.handleLogin();
-        });
-
         center.getChildren().addAll(FacebookLogin, titleLabel, subtitleLabel, playButton, quitButton);
 
         return new Scene(center, screenSize.getWidth(), screenSize.getHeight());
     } 
+
+    private void startLoginProcess() {
+        // Disable the login button
+        FacebookLogin.setDisable(true);
+        System.out.println("Starting login process");
+        // Start the login server
+        facebookLoginServer = new FacebookLoginHandler(this);
+        facebookLoginServer.handleLogin();
+        
+        // Create and start the timer
+        loginTimer = new Timeline(
+            new KeyFrame(Duration.seconds(LOGIN_TIMEOUT_SECONDS), e -> {
+                if (!isLoggedIn) {
+                    handleLoginTimeout();
+                }
+            })
+        );
+        loginTimer.play();
+    }
+
+    private void handleLoginTimeout() {
+        if (facebookLoginServer != null) {
+            facebookLoginServer.stop();
+            facebookLoginServer = null;
+        }
+        FacebookLogin.setDisable(false);
+    }
 
     @Override
     public void onLoginFailed(String errorMessage) {
@@ -164,12 +210,17 @@ public class App extends Application implements LoginCallback{
         Platform.runLater(() -> {
             // StackPane root = (StackPane) primaryStage.getScene().getRoot();
             // root.getChildren().removeAll(dimOverlay, loadingBox);
+            if (loginTimer != null) {
+                loginTimer.stop();
+            }
+            handleLoginTimeout();
 
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Login Failed");
             alert.setHeaderText(null);
             alert.setContentText("Error: " + errorMessage);
             alert.showAndWait();
+            facebookLoginServer.stop();
         });
     }
 
@@ -179,39 +230,220 @@ public class App extends Application implements LoginCallback{
         Platform.runLater(() -> {
             // StackPane root = (StackPane) primaryStage.getScene().getRoot();
             // root.getChildren().removeAll(dimOverlay, loadingBox);
-
+            if (loginTimer != null) {
+                loginTimer.stop();
+            }
+            currentUserProfile = facebookLoginServer.getUserProfile();
+            isLoggedIn = true;
+            updateProfileButton();
+            
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Login Successful");
             alert.setHeaderText(null);
-            alert.setContentText("You have successfully logged in!");
+            alert.setContentText("Welcome, " + currentUserProfile.getName() + "!");
             alert.showAndWait();
+            facebookLoginServer.stop();
         });
     }
 
-    private void fetchFacebookUserProfile(String accessToken) {
-    String url = "https://graph.facebook.com/me?fields=id,name,email&access_token=" + accessToken;
+    private void updateProfileButton() {
+        if (isLoggedIn && currentUserProfile != null) {
+            // Remove the Facebook login button
+            VBox center = (VBox) mainMenuScene.getRoot();
+            FacebookLogin.setVisible(false); // Remove the first element (Facebook login button)
 
-    try {
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("Accept", "application/json");
+            // Create profile button with image
+            ImageView profileImageView = new ImageView(currentUserProfile.getProfilePicture());
+            profileImageView.setFitHeight(40);
+            profileImageView.setFitWidth(40);
+            profileImageView.setPreserveRatio(true);
+            
+            profileButton = new Button();
+            profileButton.setGraphic(profileImageView);
+            profileButton.setStyle("-fx-background-color: transparent; -fx-padding: 5;");
+            profileButton.setEffect(new DropShadow(5, Color.rgb(0, 0, 0, 0.3)));
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        StringBuilder response = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            response.append(line);
+            // Create tooltip with user info
+            Tooltip tooltip = new Tooltip();
+            tooltip.setText("Name: " + currentUserProfile.getName() + "\nEmail: " + currentUserProfile.getEmail());
+            profileButton.setTooltip(tooltip);
+
+            // Create dropdown menu
+            profileMenu = new MenuButton();
+            profileMenu.setGraphic(profileImageView);
+            profileMenu.setStyle("-fx-background-color: transparent; -fx-padding: 5;");
+            
+            MenuItem logoutItem = new MenuItem("Logout");
+            MenuItem friendsItem = new MenuItem("Friends");
+            MenuItem leaderboardItem = new MenuItem("Leaderboard");
+            
+            logoutItem.setOnAction(e -> handleLogout());
+            friendsItem.setOnAction(e -> showFriendsList());
+            leaderboardItem.setOnAction(e -> showLeaderboard());
+            
+            profileMenu.getItems().addAll(logoutItem, new SeparatorMenuItem(), friendsItem, leaderboardItem);
+            
+            // Add profile button to the scene
+            center.getChildren().add(0, profileMenu);
         }
-        reader.close();
-
-        // Print or process the response
-        System.out.println("Facebook User Info: " + response.toString());
-
-    } catch (Exception e) {
-        e.printStackTrace();
     }
-}
 
+    private void handleLogout() {
+        isLoggedIn = false;
+        currentUserProfile = null;
+        facebookLoginServer = null;
+        
+        // Remove profile button and add back Facebook login button
+        VBox center = (VBox) mainMenuScene.getRoot();
+        center.getChildren().remove(0);
+
+        FacebookLogin.setVisible(true);
+        FacebookLogin.setDisable(false);
+    }
+
+    private void showFriendsList() {
+        // Create a new scene for friends list
+        VBox friendsContainer = new VBox(10);
+        friendsContainer.setPadding(new Insets(20));
+        friendsContainer.setStyle("-fx-background-color: rgba(255, 255, 255, 0.9); -fx-background-radius: 10;");
+        
+        Label title = new Label("Friends List");
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+        title.setTextFill(Color.DARKSLATEBLUE);
+        
+        friendsList = new VBox(10);
+        friendsScrollPane = new ScrollPane(friendsList);
+        friendsScrollPane.setFitToWidth(true);
+        friendsScrollPane.setMaxHeight(400);
+        
+        // Fetch and display friends
+        fetchAndDisplayFriends();
+        
+        friendsContainer.getChildren().addAll(title, friendsScrollPane);
+        
+        Scene friendsScene = new Scene(friendsContainer, 400, 500);
+        Stage friendsStage = new Stage();
+        friendsStage.setTitle("Friends List");
+        friendsStage.setScene(friendsScene);
+        friendsStage.show();
+    }
+
+    private void fetchAndDisplayFriends() {
+        if (currentUserProfile != null) {
+            try {
+                // Clear existing friends list
+                friendsList.getChildren().clear();
+                
+                // Add loading indicator
+                Label loadingLabel = new Label("Loading friends...");
+                loadingLabel.setStyle("-fx-text-fill: #1a237e; -fx-font-size: 16px;");
+                friendsList.getChildren().add(loadingLabel);
+
+                // Fetch friends using Facebook Graph API
+                String friendsUrl = "https://graph.facebook.com/me/friends?fields=id,name,picture&access_token=" + currentUserProfile.getAccessToken();
+                HttpURLConnection connection = (HttpURLConnection) new URL(friendsUrl).openConnection();
+                connection.setRequestMethod("GET");
+                
+                int responseCode = connection.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = in.readLine()) != null) {
+                        response.append(line);
+                    }
+                    in.close();
+
+                    // Parse the JSON response
+                    JsonObject jsonObject = JsonParser.parseString(response.toString()).getAsJsonObject();
+                    JsonArray data = jsonObject.getAsJsonArray("data");
+                    
+                    // Clear loading indicator
+                    friendsList.getChildren().clear();
+                    
+                    if (data != null && data.size() > 0) {
+                        // Add each friend to the list
+                        for (int i = 0; i < data.size(); i++) {
+                            JsonObject friend = data.get(i).getAsJsonObject();
+                            String friendId = friend.get("id").getAsString();
+                            String friendName = friend.get("name").getAsString();
+                            String pictureUrl = friend.getAsJsonObject("picture").getAsJsonObject("data").get("url").getAsString();
+                            
+                            // Create friend item
+                            HBox friendItem = new HBox(10);
+                            friendItem.setStyle("-fx-background-color: rgba(255, 255, 255, 0.8); -fx-background-radius: 10; -fx-padding: 10;");
+                            friendItem.setAlignment(Pos.CENTER_LEFT);
+                            
+                            // Add friend's profile picture
+                            ImageView friendPicture = new ImageView(new Image(pictureUrl));
+                            friendPicture.setFitHeight(40);
+                            friendPicture.setFitWidth(40);
+                            friendPicture.setPreserveRatio(true);
+                            friendPicture.setStyle("-fx-background-radius: 20;");
+                            
+                            // Add friend's name
+                            Label nameLabel = new Label(friendName);
+                            nameLabel.setStyle("-fx-text-fill: #1a237e; -fx-font-size: 16px; -fx-font-weight: bold;");
+                            
+                            // Add play button
+                            Button playButton = new Button("Play");
+                            playButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 5;");
+                            playButton.setOnAction(e -> {
+                                // TODO: Implement game invitation logic
+                                Alert alert = new Alert(AlertType.INFORMATION);
+                                alert.setTitle("Game Invitation");
+                                alert.setHeaderText(null);
+                                alert.setContentText("Game invitation sent to " + friendName);
+                                alert.showAndWait();
+                            });
+                            
+                            friendItem.getChildren().addAll(friendPicture, nameLabel, playButton);
+                            friendsList.getChildren().add(friendItem);
+                        }
+                    } else {
+                        // No friends found
+                        Label noFriendsLabel = new Label("No friends found");
+                        noFriendsLabel.setStyle("-fx-text-fill: #1a237e; -fx-font-size: 16px;");
+                        friendsList.getChildren().add(noFriendsLabel);
+                    }
+                } else {
+                    // Error handling
+                    friendsList.getChildren().clear();
+                    Label errorLabel = new Label("Error loading friends list");
+                    errorLabel.setStyle("-fx-text-fill: #f44336; -fx-font-size: 16px;");
+                    friendsList.getChildren().add(errorLabel);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                friendsList.getChildren().clear();
+                Label errorLabel = new Label("Error: " + e.getMessage());
+                errorLabel.setStyle("-fx-text-fill: #f44336; -fx-font-size: 16px;");
+                friendsList.getChildren().add(errorLabel);
+            }
+        }
+    }
+
+    private void showLeaderboard() {
+        // Create a new scene for leaderboard
+        VBox leaderboardContainer = new VBox(10);
+        leaderboardContainer.setPadding(new Insets(20));
+        leaderboardContainer.setStyle("-fx-background-color: rgba(255, 255, 255, 0.9); -fx-background-radius: 10;");
+        
+        Label title = new Label("Leaderboard");
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+        title.setTextFill(Color.DARKSLATEBLUE);
+        
+        // Add leaderboard content here
+        // This would typically fetch data from a database or backend service
+        
+        leaderboardContainer.getChildren().add(title);
+        
+        Scene leaderboardScene = new Scene(leaderboardContainer, 400, 500);
+        Stage leaderboardStage = new Stage();
+        leaderboardStage.setTitle("Leaderboard");
+        leaderboardStage.setScene(leaderboardScene);
+        leaderboardStage.show();
+    }
 
     // Create game settings scene
     // This method creates the game settings scene with text fields for entering player names and a combo box for selecting the grid size.
@@ -568,7 +800,6 @@ public class App extends Application implements LoginCallback{
         player1ScoreLabel.setText(String.valueOf(player1.getScore()));
         player2ScoreLabel.setText(String.valueOf(player2.getScore()));
     }
-
         
     public class FacebookLogin {
         public static void addFacebookLoginButton(Stage stage, VBox root) {
