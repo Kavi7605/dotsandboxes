@@ -52,13 +52,9 @@ import javafx.application.Platform;
 import fi.iki.elonen.NanoHTTPD;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.layout.HBox;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.Pane;
 import javafx.scene.image.ImageView;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -121,32 +117,32 @@ public class App extends Application implements LoginCallback{
         primaryStage.setOnCloseRequest(event -> {
             cleanupResources(); // Cleanup resources on close
         });
-        // primaryStage.getIcons().add(new Image("icon.png"));
+        primaryStage.getIcons().add(new Image("icon.png"));
     }
 
     // Create main menu scene
     // This method creates the main menu scene with the title, subtitle, and buttons for starting the game or exiting the application.
     private Scene createMainMenuScene() {
+        BorderPane root = new BorderPane();
+        root.setStyle("-fx-background-color: linear-gradient(to bottom, #1a237e, #0d47a1);");
+
         VBox center = new VBox(30);
         center.setAlignment(Pos.CENTER);
-        center.setStyle("-fx-background-color: linear-gradient(to bottom, #1a237e, #0d47a1);");
 
         Label titleLabel = new Label("Dots and Boxes");
         titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 48));
         titleLabel.setTextFill(Color.WHITE);
         titleLabel.setEffect(new DropShadow(20, Color.rgb(0, 0, 0, 0.5)));
-        
-        // Add animation to title label
+
         FadeTransition fadeIn = new FadeTransition(Duration.millis(1000), titleLabel);
         fadeIn.setFromValue(0.0);
         fadeIn.setToValue(1.0);
         fadeIn.play();
-        
-        // Add continuous glow animation
+
         Glow glow = new Glow(0.0);
         glow.setLevel(0.0);
         titleLabel.setEffect(glow);
-        
+
         Timeline glowAnimation = new Timeline(
             new KeyFrame(Duration.ZERO, new KeyValue(glow.levelProperty(), 0.0)),
             new KeyFrame(Duration.seconds(1), new KeyValue(glow.levelProperty(), 1.0)),
@@ -154,59 +150,65 @@ public class App extends Application implements LoginCallback{
         );
         glowAnimation.setCycleCount(Timeline.INDEFINITE);
         glowAnimation.play();
-        
+
         Label subtitleLabel = new Label("A Classic Strategy Game");
         subtitleLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 20));
         subtitleLabel.setTextFill(Color.rgb(255, 255, 255, 0.8));
         subtitleLabel.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
 
-        // Enhanced Facebook Login Button
         FacebookLogin = new Button("Login with Facebook");
         FacebookLogin.setStyle("-fx-font-size: 16px; -fx-padding: 15px 30px; " +
-                             "-fx-background-color: #4267B2; -fx-text-fill: white; " +
-                             "-fx-background-radius: 25; -fx-font-weight: bold; " +
-                             "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
-        
-        // Add Facebook icon
+                            "-fx-background-color: #4267B2; -fx-text-fill: white; " +
+                            "-fx-background-radius: 25; -fx-font-weight: bold; " +
+                            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
+
         ImageView facebookIcon = new ImageView(new Image("https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg"));
         facebookIcon.setFitHeight(24);
         facebookIcon.setFitWidth(24);
         facebookIcon.setPreserveRatio(true);
         FacebookLogin.setGraphic(facebookIcon);
-        FacebookLogin.setContentDisplay(ContentDisplay.LEFT);
+        FacebookLogin.setContentDisplay(ContentDisplay.CENTER);
         FacebookLogin.setGraphicTextGap(10);
-        
+
         FacebookLogin.setOnMouseEntered(e -> {
             FacebookLogin.setStyle("-fx-background-color: #3B5998; -fx-text-fill: white; " +
-                                 "-fx-background-radius: 25; -fx-font-size: 16px; " +
-                                 "-fx-padding: 15px 30px; -fx-font-weight: bold; " +
-                                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 15, 0, 0, 0);");
+                                "-fx-background-radius: 25; -fx-font-size: 16px; " +
+                                "-fx-padding: 15px 30px; -fx-font-weight: bold; " +
+                                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 15, 0, 0, 0);");
         });
-        
+
         FacebookLogin.setOnMouseExited(e -> {
             FacebookLogin.setStyle("-fx-background-color: #4267B2; -fx-text-fill: white; " +
-                                 "-fx-background-radius: 25; -fx-font-size: 16px; " +
-                                 "-fx-padding: 15px 30px; -fx-font-weight: bold; " +
-                                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
+                                "-fx-background-radius: 25; -fx-font-size: 16px; " +
+                                "-fx-padding: 15px 30px; -fx-font-weight: bold; " +
+                                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
         });
-        
+
         FacebookLogin.setOnAction(event -> {
             startLoginProcess();
         });
 
         Button playButton = new Button("Play Game");
         styleButton(playButton, "#4CAF50", "#388E3C");
-        
+
         Button quitButton = new Button("Exit");
         styleButton(quitButton, "#F44336", "#D32F2F");
-        
+
         playButton.setOnAction(event -> primaryStage.setScene(optionScene()));
         quitButton.setOnAction(event -> cleanupResources());
 
-        center.getChildren().addAll(FacebookLogin, titleLabel, subtitleLabel, playButton, quitButton);
+        center.getChildren().addAll(titleLabel, subtitleLabel, playButton, quitButton);
 
-        return new Scene(center, screenSize.getWidth(), screenSize.getHeight());
-    } 
+        HBox topRight = new HBox(FacebookLogin);
+        topRight.setAlignment(Pos.TOP_RIGHT);
+        topRight.setPadding(new Insets(20));
+
+        root.setTop(topRight);
+        root.setCenter(center);
+
+        return new Scene(root, screenSize.getWidth(), screenSize.getHeight());
+    }
+
 
     private void startLoginProcess() {
         // Disable the login button
@@ -280,9 +282,9 @@ public class App extends Application implements LoginCallback{
     private void updateProfileButton() {
         if (isLoggedIn && currentUserProfile != null) {
             // Remove the Facebook login button
-            VBox center = (VBox) mainMenuScene.getRoot();
+            // VBox center = (VBox) mainMenuScene.getRoot();
             FacebookLogin.setVisible(false);
-
+    
             // Create enhanced profile button
             try {
                 // Get profile picture from user profile
@@ -300,25 +302,25 @@ public class App extends Application implements LoginCallback{
                     profileButton = new Button();
                     profileButton.setGraphic(profileImageView);
                     profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
-                                         "-fx-padding: 10; -fx-background-radius: 30; " +
-                                         "-fx-border-color: white; -fx-border-width: 2; " +
-                                         "-fx-border-radius: 30;");
+                                             "-fx-padding: 10; -fx-background-radius: 30; " +
+                                             "-fx-border-color: white; -fx-border-width: 2; " +
+                                             "-fx-border-radius: 30;");
                     profileButton.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
-
+    
                     // Enhanced tooltip with user info
                     Tooltip tooltip = new Tooltip();
                     tooltip.setStyle("-fx-font-size: 14px; -fx-background-color: rgba(0, 0, 0, 0.8); " +
-                                   "-fx-text-fill: white; -fx-padding: 10px;");
+                                       "-fx-text-fill: white; -fx-padding: 10px;");
                     tooltip.setText("Name: " + currentUserProfile.getName() + "\nEmail: " + currentUserProfile.getEmail());
                     profileButton.setTooltip(tooltip);
-
+    
                     // Create enhanced dropdown menu
                     profileMenu = new MenuButton();
                     profileMenu.setGraphic(profileImageView);
                     profileMenu.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
-                                       "-fx-padding: 10; -fx-background-radius: 30; " +
-                                       "-fx-border-color: white; -fx-border-width: 2; " +
-                                       "-fx-border-radius: 30;");
+                                           "-fx-padding: 10; -fx-background-radius: 30; " +
+                                           "-fx-border-color: white; -fx-border-width: 2; " +
+                                           "-fx-border-radius: 30;");
                     profileMenu.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
                     
                     // Style menu items
@@ -354,8 +356,10 @@ public class App extends Application implements LoginCallback{
                     
                     profileMenu.getItems().addAll(friendsItem, leaderboardItem, new SeparatorMenuItem(), logoutItem);
                     
-                    // Add profile button to the scene
-                    center.getChildren().add(0, profileMenu);
+                    // Add profile button to the top right corner of the scene
+                    BorderPane mainLayout = (BorderPane) mainMenuScene.getRoot();
+                    mainLayout.setTop(profileMenu);
+                    BorderPane.setAlignment(profileMenu, Pos.TOP_RIGHT);
                 } else {
                     System.out.println("Profile picture URL is null or empty");
                     // Use default profile picture
@@ -371,13 +375,15 @@ public class App extends Application implements LoginCallback{
                     profileButton = new Button();
                     profileButton.setGraphic(defaultProfileImageView);
                     profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
-                                         "-fx-padding: 10; -fx-background-radius: 30; " +
-                                         "-fx-border-color: white; -fx-border-width: 2; " +
-                                         "-fx-border-radius: 30;");
+                                             "-fx-padding: 10; -fx-background-radius: 30; " +
+                                             "-fx-border-color: white; -fx-border-width: 2; " +
+                                             "-fx-border-radius: 30;");
                     profileButton.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
                     
-                    // Add profile button to the scene
-                    center.getChildren().add(0, profileButton);
+                    // Add profile button to the top right corner of the scene
+                    BorderPane mainLayout = (BorderPane) mainMenuScene.getRoot();
+                    mainLayout.setTop(profileButton);
+                    BorderPane.setAlignment(profileButton, Pos.TOP_RIGHT);
                 }
             } catch (Exception e) {
                 System.out.println("Error loading profile picture: " + e.getMessage());
@@ -395,13 +401,15 @@ public class App extends Application implements LoginCallback{
                 profileButton = new Button();
                 profileButton.setGraphic(defaultProfileImageView);
                 profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
-                                     "-fx-padding: 10; -fx-background-radius: 30; " +
-                                     "-fx-border-color: white; -fx-border-width: 2; " +
-                                     "-fx-border-radius: 30;");
+                                         "-fx-padding: 10; -fx-background-radius: 30; " +
+                                         "-fx-border-color: white; -fx-border-width: 2; " +
+                                         "-fx-border-radius: 30;");
                 profileButton.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
                 
-                // Add profile button to the scene
-                center.getChildren().add(0, profileButton);
+                // Add profile button to the top right corner of the scene
+                BorderPane mainLayout = (BorderPane) mainMenuScene.getRoot();
+                mainLayout.setTop(profileButton);
+                BorderPane.setAlignment(profileButton, Pos.TOP_RIGHT);
             }
         }
     }
