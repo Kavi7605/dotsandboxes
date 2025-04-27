@@ -6,6 +6,7 @@ import javafx.concurrent.Worker;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
+import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar.ButtonData;
@@ -60,6 +61,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonArray;
 import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.ProgressIndicator;
 
 
@@ -282,109 +284,83 @@ public class App extends Application implements LoginCallback{
     private void updateProfileButton() {
         if (isLoggedIn && currentUserProfile != null) {
             // Remove the Facebook login button
-            // VBox center = (VBox) mainMenuScene.getRoot();
             FacebookLogin.setVisible(false);
     
             // Create enhanced profile button
             try {
                 // Get profile picture from user profile
                 Image profileImage = currentUserProfile.getProfilePicture();
-                if (profileImage != null) {
-                    ImageView profileImageView = new ImageView(profileImage);
-                    profileImageView.setFitHeight(50);
-                    profileImageView.setFitWidth(50);
-                    profileImageView.setPreserveRatio(true);
-                    
-                    // Create circular clip for profile image
-                    Circle clip = new Circle(25, 25, 25);
-                    profileImageView.setClip(clip);
-                    
-                    profileButton = new Button();
-                    profileButton.setGraphic(profileImageView);
-                    profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
-                                             "-fx-padding: 10; -fx-background-radius: 30; " +
-                                             "-fx-border-color: white; -fx-border-width: 2; " +
-                                             "-fx-border-radius: 30;");
-                    profileButton.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
+                ImageView profileImageView = new ImageView(profileImage != null ? profileImage : 
+                    new Image("https://cdn-icons-png.flaticon.com/512/149/149071.png"));
+                profileImageView.setFitHeight(50);
+                profileImageView.setFitWidth(50);
+                profileImageView.setPreserveRatio(true);
+                
+                // Create circular clip for profile image
+                Circle clip = new Circle(25, 25, 25);
+                profileImageView.setClip(clip);
+                
+                profileButton = new Button();
+                profileButton.setGraphic(profileImageView);
+                profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
+                                         "-fx-padding: 10; -fx-background-radius: 30; " +
+                                         "-fx-border-color: white; -fx-border-width: 2; " +
+                                         "-fx-border-radius: 30;");
+                profileButton.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
     
-                    // Enhanced tooltip with user info
-                    Tooltip tooltip = new Tooltip();
-                    tooltip.setStyle("-fx-font-size: 14px; -fx-background-color: rgba(0, 0, 0, 0.8); " +
-                                       "-fx-text-fill: white; -fx-padding: 10px;");
-                    tooltip.setText("Name: " + currentUserProfile.getName() + "\nEmail: " + currentUserProfile.getEmail());
-                    profileButton.setTooltip(tooltip);
+                // Enhanced tooltip with user info
+                Tooltip tooltip = new Tooltip();
+                tooltip.setStyle("-fx-font-size: 14px; -fx-background-color: rgba(0, 0, 0, 0.8); " +
+                                 "-fx-text-fill: white; -fx-padding: 10px;");
+                tooltip.setText("Name: " + currentUserProfile.getName() + "\nEmail: " + currentUserProfile.getEmail());
+                profileButton.setTooltip(tooltip);
     
-                    // Create enhanced dropdown menu
-                    profileMenu = new MenuButton();
-                    profileMenu.setGraphic(profileImageView);
-                    profileMenu.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
-                                           "-fx-padding: 10; -fx-background-radius: 30; " +
-                                           "-fx-border-color: white; -fx-border-width: 2; " +
-                                           "-fx-border-radius: 30;");
-                    profileMenu.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
-                    
-                    // Style menu items
-                    MenuItem friendsItem = new MenuItem("Friends");
-                    MenuItem leaderboardItem = new MenuItem("Leaderboard");
-                    MenuItem logoutItem = new MenuItem("Logout");
-                    
-                    // Add icons to menu items
-                    ImageView friendsIcon = new ImageView(new Image("https://cdn-icons-png.flaticon.com/512/1077/1077114.png"));
-                    ImageView leaderboardIcon = new ImageView(new Image("https://cdn-icons-png.flaticon.com/512/2103/2103633.png"));
-                    ImageView logoutIcon = new ImageView(new Image("https://cdn-icons-png.flaticon.com/512/1828/1828479.png"));
-                    
-                    friendsIcon.setFitHeight(20);
-                    friendsIcon.setFitWidth(20);
-                    leaderboardIcon.setFitHeight(20);
-                    leaderboardIcon.setFitWidth(20);
-                    logoutIcon.setFitHeight(20);
-                    logoutIcon.setFitWidth(20);
-                    
-                    friendsItem.setGraphic(friendsIcon);
-                    leaderboardItem.setGraphic(leaderboardIcon);
-                    logoutItem.setGraphic(logoutIcon);
-                    
-                    // Style menu items
-                    String menuItemStyle = "-fx-font-size: 14px; -fx-padding: 10px 20px; -fx-background-color: white;";
-                    friendsItem.setStyle(menuItemStyle);
-                    leaderboardItem.setStyle(menuItemStyle);
-                    logoutItem.setStyle(menuItemStyle);
-                    
-                    logoutItem.setOnAction(e -> handleLogout());
-                    friendsItem.setOnAction(e -> showFriendsList());
-                    leaderboardItem.setOnAction(e -> showLeaderboard());
-                    
-                    profileMenu.getItems().addAll(friendsItem, leaderboardItem, new SeparatorMenuItem(), logoutItem);
-                    
-                    // Add profile button to the top right corner of the scene
-                    BorderPane mainLayout = (BorderPane) mainMenuScene.getRoot();
-                    mainLayout.setTop(profileMenu);
-                    BorderPane.setAlignment(profileMenu, Pos.TOP_RIGHT);
-                } else {
-                    System.out.println("Profile picture URL is null or empty");
-                    // Use default profile picture
-                    Image defaultProfileImage = new Image("https://cdn-icons-png.flaticon.com/512/149/149071.png");
-                    ImageView defaultProfileImageView = new ImageView(defaultProfileImage);
-                    defaultProfileImageView.setFitHeight(50);
-                    defaultProfileImageView.setFitWidth(50);
-                    defaultProfileImageView.setPreserveRatio(true);
-                    
-                    Circle clip = new Circle(25, 25, 25);
-                    defaultProfileImageView.setClip(clip);
-                    
-                    profileButton = new Button();
-                    profileButton.setGraphic(defaultProfileImageView);
-                    profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
-                                             "-fx-padding: 10; -fx-background-radius: 30; " +
-                                             "-fx-border-color: white; -fx-border-width: 2; " +
-                                             "-fx-border-radius: 30;");
-                    profileButton.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
-                    
-                    // Add profile button to the top right corner of the scene
-                    BorderPane mainLayout = (BorderPane) mainMenuScene.getRoot();
-                    mainLayout.setTop(profileButton);
-                    BorderPane.setAlignment(profileButton, Pos.TOP_RIGHT);
-                }
+                // Create enhanced context menu
+                ContextMenu profileMenu = new ContextMenu();
+    
+                // Create menu items
+                MenuItem friendsItem = new MenuItem("Friends");
+                MenuItem leaderboardItem = new MenuItem("Leaderboard");
+                MenuItem logoutItem = new MenuItem("Logout");
+    
+                // Add icons to menu items
+                ImageView friendsIcon = new ImageView(new Image("https://cdn-icons-png.flaticon.com/512/1077/1077114.png"));
+                ImageView leaderboardIcon = new ImageView(new Image("https://cdn-icons-png.flaticon.com/512/2103/2103633.png"));
+                ImageView logoutIcon = new ImageView(new Image("https://cdn-icons-png.flaticon.com/512/1828/1828479.png"));
+    
+                friendsIcon.setFitHeight(20);
+                friendsIcon.setFitWidth(20);
+                leaderboardIcon.setFitHeight(20);
+                leaderboardIcon.setFitWidth(20);
+                logoutIcon.setFitHeight(20);
+                logoutIcon.setFitWidth(20);
+    
+                friendsItem.setGraphic(friendsIcon);
+                leaderboardItem.setGraphic(leaderboardIcon);
+                logoutItem.setGraphic(logoutIcon);
+    
+                // Style menu items
+                String menuItemStyle = "-fx-font-size: 14px; -fx-padding: 10px 20px; -fx-background-color: #D3D3D3;";
+                friendsItem.setStyle(menuItemStyle);
+                leaderboardItem.setStyle(menuItemStyle);
+                logoutItem.setStyle(menuItemStyle);
+    
+                // Set actions for menu items
+                logoutItem.setOnAction(e -> handleLogout());
+                friendsItem.setOnAction(e -> showFriendsList());
+                leaderboardItem.setOnAction(e -> showLeaderboard());
+    
+                // Add items to the context menu
+                profileMenu.getItems().addAll(friendsItem, leaderboardItem, new SeparatorMenuItem(), logoutItem);
+    
+                // Show context menu on button click
+                profileButton.setOnAction(e -> profileMenu.show(profileButton, Side.BOTTOM, 0, 0));
+    
+                // Add profile button to the top right corner of the scene
+                BorderPane mainLayout = (BorderPane) mainMenuScene.getRoot();
+                mainLayout.setTop (profileButton);
+                mainLayout.getChildren().remove(FacebookLogin);
+                BorderPane.setAlignment(profileButton, Pos.TOP_RIGHT);
             } catch (Exception e) {
                 System.out.println("Error loading profile picture: " + e.getMessage());
                 e.printStackTrace();
@@ -394,10 +370,10 @@ public class App extends Application implements LoginCallback{
                 defaultProfileImageView.setFitHeight(50);
                 defaultProfileImageView.setFitWidth(50);
                 defaultProfileImageView.setPreserveRatio(true);
-                
+    
                 Circle clip = new Circle(25, 25, 25);
                 defaultProfileImageView.setClip(clip);
-                
+    
                 profileButton = new Button();
                 profileButton.setGraphic(defaultProfileImageView);
                 profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
@@ -405,24 +381,27 @@ public class App extends Application implements LoginCallback{
                                          "-fx-border-color: white; -fx-border-width: 2; " +
                                          "-fx-border-radius: 30;");
                 profileButton.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
-                
+    
                 // Add profile button to the top right corner of the scene
                 BorderPane mainLayout = (BorderPane) mainMenuScene.getRoot();
                 mainLayout.setTop(profileButton);
+                mainLayout.getChildren().remove(FacebookLogin);
                 BorderPane.setAlignment(profileButton, Pos.TOP_RIGHT);
             }
         }
     }
 
     private void handleLogout() {
+
         isLoggedIn = false;
         currentUserProfile = null;
         facebookLoginServer = null;
         
         // Remove profile button and add back Facebook login button
-        VBox center = (VBox) mainMenuScene.getRoot();
-        center.getChildren().remove(0);
+        BorderPane center = (BorderPane) mainMenuScene.getRoot();
+        center.getChildren().remove(profileButton);
 
+        center.getChildren().add(FacebookLogin);
         FacebookLogin.setVisible(true);
         FacebookLogin.setDisable(false);
     }
@@ -994,7 +973,6 @@ public class App extends Application implements LoginCallback{
         player2ScoreLabel.setText(String.valueOf(player2.getScore()));
     }
         
-
     private void cleanupResources() {
         try {
             if (facebookLoginServer != null) {
