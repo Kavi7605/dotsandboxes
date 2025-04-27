@@ -31,51 +31,6 @@ public class UserProfile {
         this.accessToken = accessToken;
 
         this.profilePicture = new Image(getProfilePictureUrl(id, accessToken), true);
-
-        // Load profile picture
-        // try {
-            // Fetch friends using Facebook Graph API
-            // String friendsUrl = "https://graph.facebook.com/me/friends?fields=id,name,picture&access_token=" + accessToken;
-            // HttpURLConnection connection = (HttpURLConnection) new URL(friendsUrl).openConnection();
-            // connection.setRequestMethod("GET");
-            
-            // int responseCode = connection.getResponseCode();
-            // if (responseCode == HttpURLConnection.HTTP_OK) {
-            //     BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            //     StringBuilder response = new StringBuilder();
-            //     String line;
-            //     while ((line = in.readLine()) != null) {
-            //         response.append(line);
-            //     }
-            //     in.close();
-
-            //     // Parse the JSON response
-            //     JsonObject jsonObject = JsonParser.parseString(response.toString()).getAsJsonObject();
-            //     JsonArray data = jsonObject.getAsJsonArray("data");
-            //     for (JsonElement element : data) {
-            //         JsonObject friend = element.getAsJsonObject();
-            //         String friendId = friend.get("id").getAsString();
-            //         String friendName = friend.get("name").getAsString();
-            //         String friendPictureUrl = friend.get("picture").getAsJsonObject().get("data").getAsJsonObject().get("url").getAsString();
-
-            //         // Print the friend's details
-            //         System.out.println("Friend ID: " + friendId);
-            //         System.out.println("Friend Name: " + friendName);
-            //         System.out.println("Friend Picture URL: " + friendPictureUrl);
-            //     }
-            // }
-                
-        //     this.profilePicture = new Image("https://graph.facebook.com/" + id + "/picture", true);
-        //     this.profilePicture.errorProperty().addListener((observable, oldValue, newValue) -> {
-        //         if (newValue) {
-        //             System.out.println("Error loading Facebook profile picture, using default");
-        //             this.profilePicture = new Image("https://cdn-icons-png.flaticon.com/512/149/149071.png", true);
-        //         }
-        //     });
-        // } catch (Exception e) {
-        //     System.out.println("Error loading profile picture: " + e.getMessage());
-        //     this.profilePicture = new Image("https://cdn-icons-png.flaticon.com/512/149/149071.png", true);
-        // }
     }
 
     private String getProfilePictureUrl(String userId, String accessToken) {
