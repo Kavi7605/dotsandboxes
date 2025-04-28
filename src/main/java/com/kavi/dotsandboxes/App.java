@@ -66,6 +66,8 @@ import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.RadioButton;
 import javafx.animation.PauseTransition;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 
 
 public class App extends Application implements LoginCallback{  
@@ -107,6 +109,8 @@ public class App extends Application implements LoginCallback{
     private Label botThinkingLabel;
     private ProgressIndicator botThinkingIndicator;
     private PauseTransition botDelay;
+    private SoundManager soundManager;
+    private Button soundToggleButton;
 
     // Main method to run the application
     // This method is the entry point for the JavaFX application.
@@ -118,6 +122,7 @@ public class App extends Application implements LoginCallback{
     // This method initializes the primary stage and sets the main menu scene as the initial scene.
     @Override
     public void start(Stage primaryStage) {
+        soundManager = SoundManager.getInstance();
         // FirebaseInitializer.initialize();
         this.primaryStage = primaryStage;
         mainMenuScene = createMainMenuScene();
@@ -196,6 +201,7 @@ public class App extends Application implements LoginCallback{
         });
 
         FacebookLogin.setOnAction(event -> {
+            soundManager.playSound("button");
             startLoginProcess();
         });
 
@@ -205,12 +211,27 @@ public class App extends Application implements LoginCallback{
         Button quitButton = new Button("Exit");
         styleButton(quitButton, "#F44336", "#D32F2F");
 
-        playButton.setOnAction(event -> primaryStage.setScene(optionScene()));
-        quitButton.setOnAction(event -> cleanupResources());
+        playButton.setOnAction(event -> {
+            soundManager.playSound("button");
+            primaryStage.setScene(optionScene());
+        });
+        quitButton.setOnAction(event -> {
+            soundManager.playSound("button");
+            cleanupResources();
+        });
 
         center.getChildren().addAll(titleLabel, subtitleLabel, playButton, quitButton);
 
-        HBox topRight = new HBox(FacebookLogin);
+        // Add sound toggle button
+        soundToggleButton = new Button("🔊");
+        soundToggleButton.setStyle("-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 24px;");
+        soundToggleButton.setOnAction(event -> {
+            soundManager.toggleMute();
+            soundToggleButton.setText(soundManager.isMuted() ? "🔇" : "🔊");
+            soundManager.playSound("button");
+        });
+
+        HBox topRight = new HBox(20, soundToggleButton, FacebookLogin);
         topRight.setAlignment(Pos.TOP_RIGHT);
         topRight.setPadding(new Insets(20));
 
@@ -401,7 +422,7 @@ public class App extends Application implements LoginCallback{
     }
 
     private void handleLogout() {
-
+        soundManager.playSound("button");
         isLoggedIn = false;
         currentUserProfile = null;
         facebookLoginServer = null;
@@ -543,6 +564,7 @@ public class App extends Application implements LoginCallback{
                             });
                             
                             playButton.setOnAction(e -> {
+                                soundManager.playSound("button");
                                 Alert alert = new Alert(AlertType.INFORMATION);
                                 alert.setTitle("Game Invitation");
                                 alert.setHeaderText(null);
@@ -624,6 +646,16 @@ public class App extends Application implements LoginCallback{
         leaderboardStage.setTitle("Leaderboard");
         leaderboardStage.setScene(leaderboardScene);
         leaderboardStage.show();
+
+        // Add close button with sound
+        Button closeButton = new Button("Close");
+        styleButton(closeButton, "#F44336", "#D32F2F");
+        closeButton.setOnAction(e -> {
+            soundManager.playSound("button");
+            ((Stage) closeButton.getScene().getWindow()).close();
+        });
+        
+        leaderboardContainer.getChildren().add(closeButton);
     }
 
     // Create game settings scene
@@ -713,6 +745,7 @@ public class App extends Application implements LoginCallback{
         difficultyComboBox.setDisable(!isSinglePlayer);
 
         singlePlayer.setOnAction(event -> {
+            soundManager.playSound("button");
             isSinglePlayer = true;
             p2Name.setDisable(true);
             p2Name.setText("Bot");
@@ -720,6 +753,7 @@ public class App extends Application implements LoginCallback{
         });
 
         multiPlayer.setOnAction(event -> {
+            soundManager.playSound("button");
             isSinglePlayer = false;
             p2Name.setDisable(false);
             p2Name.setText("");
@@ -743,6 +777,7 @@ public class App extends Application implements LoginCallback{
         validatePlayerNames(p1Name, p2Name, confirmButton, isSinglePlayer);
 
         confirmButton.setOnAction(event -> {
+            soundManager.playSound("button");
             if (validatePlayerNames(p1Name, p2Name, confirmButton, isSinglePlayer)) {
                 primaryStage.setScene(createGameBoardScene());
             }
@@ -750,7 +785,10 @@ public class App extends Application implements LoginCallback{
 
         Button backButton = new Button("Back to Menu");
         styleButton(backButton, "#2196F3", "#1976D2");
-        backButton.setOnAction(event -> primaryStage.setScene(mainMenuScene));
+        backButton.setOnAction(event -> {
+            soundManager.playSound("button");
+            primaryStage.setScene(mainMenuScene);
+        });
 
         HBox buttonBox = new HBox(20);
         buttonBox.setAlignment(Pos.CENTER);
@@ -817,6 +855,17 @@ public class App extends Application implements LoginCallback{
             button.setStyle("-fx-background-color: " + color + "; -fx-text-fill: white; " +
                           "-fx-background-radius: 25; -fx-font-size: 18px; -fx-padding: 15px 30px; -fx-font-weight: bold;");
             button.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
+        });
+
+        // Store the original action
+        EventHandler<ActionEvent> originalAction = button.getOnAction();
+        
+        // Set new action that plays sound and then executes original action
+        button.setOnAction(event -> {
+            soundManager.playSound("button");
+            if (originalAction != null) {
+                originalAction.handle(event);
+            }
         });
     }
 
@@ -919,7 +968,11 @@ public class App extends Application implements LoginCallback{
 
         Button backButton = new Button("←");
         styleButton(backButton, "#2196F3", "#1976D2");
-        backButton.setOnAction(event -> primaryStage.setScene(mainMenuScene));
+        backButton.setOnAction(event -> {
+            primaryStage.setScene(mainMenuScene);
+            soundManager.playSound("button");
+        });
+
 
         playerInfo.getChildren().addAll(backButton, player1Box, infoLabel, player2Box);
         topBar.getChildren().add(playerInfo);
@@ -990,22 +1043,24 @@ public class App extends Application implements LoginCallback{
                 return;
             }
 
+            soundManager.playSound("line");
             line.setStroke(currentPlayer.getColor());
             line.setEffect(new Glow(5));
             lineDrawn.put(line, true);
 
             int boxCompleted = checkForCompletedBox(line, isLineUp);
+            if (boxCompleted > 0) {
+                soundManager.playSound("box");
+            }
             if (boxCompleted == 0) {
                 currentPlayer = (currentPlayer == player1) ? player2 : player1;
                 infoLabel.setText(currentPlayer.getName() + "'s turn");
                 
-                // Add animation for turn change
                 FadeTransition fade = new FadeTransition(Duration.millis(300), infoLabel);
                 fade.setFromValue(0.5);
                 fade.setToValue(1.0);
                 fade.play();
 
-                // If it's single player and bot's turn, trigger bot move
                 if (isSinglePlayer && currentPlayer == botPlayer) {
                     botPlayer.setGameState(lineDrawn, hLines, vLines, GRID_SIZE);
                     botThinkingLabel.setVisible(true);
@@ -1017,22 +1072,29 @@ public class App extends Application implements LoginCallback{
             boxCounter -= boxCompleted;
             
             if(boxCounter < 1) {
-                String winMsg = "It was a tie.";
+                final String winMsg;
                 if (player1.getScore() > player2.getScore()) {
                     winMsg = player1Name + " Wins!!";
-                }
-                if (player1.getScore() < player2.getScore()) {
+                    soundManager.playSound("win");
+                } else if (player1.getScore() < player2.getScore()) {
                     winMsg = player2Name + " Wins!!";
+                    soundManager.playSound("lose");
+                } else {
+                    winMsg = "It was a tie.";
+                    soundManager.playSound("tie");
                 }
                 
-                Alert alert = new Alert(AlertType.INFORMATION, winMsg, new ButtonType("Back to Main Menu"));
-                alert.setTitle("Game Over");
-                alert.setHeaderText(null);
-                alert.setContentText(winMsg);
-                alert.getDialogPane().setStyle("-fx-background-color: #1a237e;");
-                alert.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
-                alert.showAndWait();
-                primaryStage.setScene(mainMenuScene);
+                // Use Platform.runLater to show alert after animation
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(AlertType.INFORMATION, winMsg, new ButtonType("Back to Main Menu"));
+                    alert.setTitle("Game Over");
+                    alert.setHeaderText(null);
+                    alert.setContentText(winMsg);
+                    alert.getDialogPane().setStyle("-fx-background-color: #1a237e;");
+                    alert.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
+                    alert.showAndWait();
+                    primaryStage.setScene(mainMenuScene);
+                });
             }
         });
     }
@@ -1108,6 +1170,7 @@ public class App extends Application implements LoginCallback{
         if (botPlayer != null && currentPlayer == botPlayer) {
             Line botMove = botPlayer.makeMove();
             if (botMove != null) {
+                soundManager.playSound("line");
                 botMove.setStroke(botPlayer.getColor());
                 botMove.setEffect(new Glow(5));
                 lineDrawn.put(botMove, true);
@@ -1115,30 +1178,40 @@ public class App extends Application implements LoginCallback{
                 boolean isLineUp = botMove.getStartY() == botMove.getEndY();
                 int boxCompleted = checkForCompletedBox(botMove, isLineUp);
                 
+                if (boxCompleted > 0) {
+                    soundManager.playSound("box");
+                }
+                
                 updateScores();
                 boxCounter -= boxCompleted;
                 
                 if(boxCounter < 1) {
-                    String winMsg = "It was a tie.";
+                    final String winMsg;
                     if (player1.getScore() > player2.getScore()) {
                         winMsg = player1Name + " Wins!!";
-                    }
-                    if (player1.getScore() < player2.getScore()) {
+                        soundManager.playSound("win");
+                    } else if (player1.getScore() < player2.getScore()) {
                         winMsg = player2Name + " Wins!!";
+                        soundManager.playSound("lose");
+                    } else {
+                        winMsg = "It was a tie.";
+                        soundManager.playSound("tie");
                     }
                     
-                    Alert alert = new Alert(AlertType.INFORMATION, winMsg, new ButtonType("Back to Main Menu"));
-                    alert.setTitle("Game Over");
-                    alert.setHeaderText(null);
-                    alert.setContentText(winMsg);
-                    alert.getDialogPane().setStyle("-fx-background-color: #1a237e;");
-                    alert.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
-                    alert.showAndWait();
-                    primaryStage.setScene(mainMenuScene);
+                    // Use Platform.runLater to show alert after animation
+                    Platform.runLater(() -> {
+                        Alert alert = new Alert(AlertType.INFORMATION, winMsg, new ButtonType("Back to Main Menu"));
+                        alert.setTitle("Game Over");
+                        alert.setHeaderText(null);
+                        alert.setContentText(winMsg);
+                        alert.getDialogPane().setStyle("-fx-background-color: #1a237e;");
+                        alert.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
+                        alert.showAndWait();
+                        primaryStage.setScene(mainMenuScene);
+                    });
                     return;
                 }
 
-                // If bot completed a box, it gets another turn
                 if (boxCompleted > 0) {
                     botPlayer.setGameState(lineDrawn, hLines, vLines, GRID_SIZE);
                     botDelay.play();
