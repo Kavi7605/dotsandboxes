@@ -63,6 +63,9 @@ import com.google.gson.JsonArray;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.RadioButton;
+import javafx.animation.PauseTransition;
 
 
 public class App extends Application implements LoginCallback{  
@@ -98,6 +101,12 @@ public class App extends Application implements LoginCallback{
     private Button FacebookLogin;
     private Timeline loginTimer;
     private static final int LOGIN_TIMEOUT_SECONDS = 30;
+    private static boolean isSinglePlayer = false;
+    private static BotPlayer.Difficulty botDifficulty = BotPlayer.Difficulty.MEDIUM;
+    private BotPlayer botPlayer;
+    private Label botThinkingLabel;
+    private ProgressIndicator botThinkingIndicator;
+    private PauseTransition botDelay;
 
     // Main method to run the application
     // This method is the entry point for the JavaFX application.
@@ -640,10 +649,14 @@ public class App extends Application implements LoginCallback{
         Label player1Label = new Label("Player 1:");
         Label player2Label = new Label("Player 2:");
         Label gridSize = new Label("Grid Size:");
+        Label gameMode = new Label("Game Mode:");
+        Label botDifficultyLabel = new Label("Bot Difficulty:");
         
         styleLabel(player1Label);
         styleLabel(player2Label);
         styleLabel(gridSize);
+        styleLabel(gameMode);
+        styleLabel(botDifficultyLabel);
 
         TextField p1Name = new TextField("");
         TextField p2Name = new TextField("");
@@ -668,9 +681,72 @@ public class App extends Application implements LoginCallback{
         });
         styleComboBox(gridField);
 
+        ToggleGroup gameModeGroup = new ToggleGroup();
+        RadioButton singlePlayer = new RadioButton("Single Player");
+        RadioButton multiPlayer = new RadioButton("Multi Player");
+        singlePlayer.setToggleGroup(gameModeGroup);
+        multiPlayer.setToggleGroup(gameModeGroup);
+        multiPlayer.setSelected(true);
+        singlePlayer.setTextFill(Color.WHITE);
+        multiPlayer.setTextFill(Color.WHITE);
+        singlePlayer.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        multiPlayer.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+
+        ComboBox<BotPlayer.Difficulty> difficultyComboBox = new ComboBox<>();
+        difficultyComboBox.getItems().addAll(BotPlayer.Difficulty.values());
+        difficultyComboBox.setValue(BotPlayer.Difficulty.MEDIUM);
+        styleComboBox(difficultyComboBox);
+
+        difficultyComboBox.setOnAction(event -> {
+            botDifficulty = difficultyComboBox.getValue();
+        });
+
+        // Initialize UI state based on current game mode
+        p2Name.setDisable(isSinglePlayer);
+        if (isSinglePlayer) {
+            p2Name.setText("Bot");
+            singlePlayer.setSelected(true);
+        } else {
+            p2Name.setText("");
+            multiPlayer.setSelected(true);
+        }
+        difficultyComboBox.setDisable(!isSinglePlayer);
+
+        singlePlayer.setOnAction(event -> {
+            isSinglePlayer = true;
+            p2Name.setDisable(true);
+            p2Name.setText("Bot");
+            difficultyComboBox.setDisable(false);
+        });
+
+        multiPlayer.setOnAction(event -> {
+            isSinglePlayer = false;
+            p2Name.setDisable(false);
+            p2Name.setText("");
+            difficultyComboBox.setDisable(true);
+        });
+
         Button confirmButton = new Button("Start Game");
         styleButton(confirmButton, "#4CAF50", "#388E3C");
-        confirmButton.setOnAction(event -> primaryStage.setScene(createGameBoardScene()));
+        confirmButton.setDisable(true); // Initially disabled
+
+        // Add validation for player names
+        p1Name.textProperty().addListener((observable, oldValue, newValue) -> {
+            validatePlayerNames(p1Name, p2Name, confirmButton, isSinglePlayer);
+        });
+
+        p2Name.textProperty().addListener((observable, oldValue, newValue) -> {
+            validatePlayerNames(p1Name, p2Name, confirmButton, isSinglePlayer);
+        });
+
+        // Initial validation
+        validatePlayerNames(p1Name, p2Name, confirmButton, isSinglePlayer);
+
+        confirmButton.setOnAction(event -> {
+            if (validatePlayerNames(p1Name, p2Name, confirmButton, isSinglePlayer)) {
+                primaryStage.setScene(createGameBoardScene());
+            }
+        });
 
         Button backButton = new Button("Back to Menu");
         styleButton(backButton, "#2196F3", "#1976D2");
@@ -680,12 +756,20 @@ public class App extends Application implements LoginCallback{
         buttonBox.setAlignment(Pos.CENTER);
         buttonBox.getChildren().addAll(backButton, confirmButton);
 
+        HBox gameModeBox = new HBox(20);
+        gameModeBox.setAlignment(Pos.CENTER);
+        gameModeBox.getChildren().addAll(singlePlayer, multiPlayer);
+
         grid.add(player1Label, 0, 0);
         grid.add(player2Label, 0, 1);
         grid.add(gridSize, 0, 2);
+        grid.add(gameMode, 0, 3);
+        grid.add(botDifficultyLabel, 0, 4);
         grid.add(p1Name, 1, 0);
         grid.add(p2Name, 1, 1);
         grid.add(gridField, 1, 2);
+        grid.add(gameModeBox, 1, 3);
+        grid.add(difficultyComboBox, 1, 4);
 
         vBox.getChildren().addAll(titleLabel, grid, buttonBox);
         root.setCenter(vBox);
@@ -710,7 +794,7 @@ public class App extends Application implements LoginCallback{
     }
 
     // styleComboBox method to style combo boxes
-    private void styleComboBox(ComboBox<String> comboBox) {
+    private <T> void styleComboBox(ComboBox<T> comboBox) {
         comboBox.setMaxWidth(250);
         comboBox.setStyle("-fx-font-size: 16px; -fx-padding: 12px; -fx-background-color: rgba(255, 255, 255, 0.9); " +
                          "-fx-text-fill: #1a237e; -fx-background-radius: 10; -fx-border-radius: 10;");
@@ -849,6 +933,34 @@ public class App extends Application implements LoginCallback{
 
         updateScores();
 
+        if (isSinglePlayer) {
+            botPlayer = new BotPlayer("Bot", Color.rgb(85, 170, 255), botDifficulty);
+            player2 = botPlayer;
+            
+            // Create bot thinking UI elements
+            botThinkingLabel = new Label("Bot is thinking...");
+            botThinkingLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+            botThinkingLabel.setTextFill(Color.WHITE);
+            botThinkingLabel.setVisible(false);
+            
+            botThinkingIndicator = new ProgressIndicator();
+            botThinkingIndicator.setVisible(false);
+            botThinkingIndicator.setStyle("-fx-progress-color: white;");
+            
+            HBox botThinkingBox = new HBox(10, botThinkingIndicator, botThinkingLabel);
+            botThinkingBox.setAlignment(Pos.CENTER);
+            botThinkingBox.setVisible(false);
+            
+            topBar.getChildren().add(botThinkingBox);
+            
+            // Initialize bot delay
+            botDelay = new PauseTransition(Duration.seconds(1 + Math.random() * 0.5));
+            botDelay.setOnFinished(event -> {
+                makeBotMove();
+                botThinkingBox.setVisible(false);
+            });
+        }
+
         return new Scene(borderPane, screenSize.getWidth(), screenSize.getHeight());
     }
 
@@ -860,21 +972,21 @@ public class App extends Application implements LoginCallback{
         line.setStrokeWidth(LINE_THICKNESS * 2);
 
         line.setOnMouseEntered(event -> {
-            if (!lineDrawn.get(line)) {
+            if (!lineDrawn.get(line) && (!isSinglePlayer || currentPlayer != botPlayer)) {
                 line.setStroke(currentPlayer.getColor());
                 line.setEffect(new Glow(10));
             }
         });
 
         line.setOnMouseExited(event -> {
-            if (!lineDrawn.get(line)) {
+            if (!lineDrawn.get(line) && (!isSinglePlayer || currentPlayer != botPlayer)) {
                 line.setStroke(Color.TRANSPARENT);
                 line.setEffect(null);
             }
         });
 
         line.setOnMouseClicked(event -> {
-            if (lineDrawn.get(line)) {
+            if (lineDrawn.get(line) || (isSinglePlayer && currentPlayer == botPlayer)) {
                 return;
             }
 
@@ -892,6 +1004,14 @@ public class App extends Application implements LoginCallback{
                 fade.setFromValue(0.5);
                 fade.setToValue(1.0);
                 fade.play();
+
+                // If it's single player and bot's turn, trigger bot move
+                if (isSinglePlayer && currentPlayer == botPlayer) {
+                    botPlayer.setGameState(lineDrawn, hLines, vLines, GRID_SIZE);
+                    botThinkingLabel.setVisible(true);
+                    botThinkingIndicator.setVisible(true);
+                    botDelay.play();
+                }
             }
             updateScores();
             boxCounter -= boxCompleted;
@@ -905,8 +1025,6 @@ public class App extends Application implements LoginCallback{
                     winMsg = player2Name + " Wins!!";
                 }
                 
-                // ButtonType loginButtonType = new ButtonType("Back to Main Menu", ButtonData.OK_DONE);
-                // ButtonType replayButtonType = new ButtonType("Replay", ButtonData.OK_DONE);
                 Alert alert = new Alert(AlertType.INFORMATION, winMsg, new ButtonType("Back to Main Menu"));
                 alert.setTitle("Game Over");
                 alert.setHeaderText(null);
@@ -984,5 +1102,73 @@ public class App extends Application implements LoginCallback{
         }
         Platform.exit(); // Exit the JavaFX application
         System.exit(0); // Exit the application        
+    }
+
+    private void makeBotMove() {
+        if (botPlayer != null && currentPlayer == botPlayer) {
+            Line botMove = botPlayer.makeMove();
+            if (botMove != null) {
+                botMove.setStroke(botPlayer.getColor());
+                botMove.setEffect(new Glow(5));
+                lineDrawn.put(botMove, true);
+
+                boolean isLineUp = botMove.getStartY() == botMove.getEndY();
+                int boxCompleted = checkForCompletedBox(botMove, isLineUp);
+                
+                updateScores();
+                boxCounter -= boxCompleted;
+                
+                if(boxCounter < 1) {
+                    String winMsg = "It was a tie.";
+                    if (player1.getScore() > player2.getScore()) {
+                        winMsg = player1Name + " Wins!!";
+                    }
+                    if (player1.getScore() < player2.getScore()) {
+                        winMsg = player2Name + " Wins!!";
+                    }
+                    
+                    Alert alert = new Alert(AlertType.INFORMATION, winMsg, new ButtonType("Back to Main Menu"));
+                    alert.setTitle("Game Over");
+                    alert.setHeaderText(null);
+                    alert.setContentText(winMsg);
+                    alert.getDialogPane().setStyle("-fx-background-color: #1a237e;");
+                    alert.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
+                    alert.showAndWait();
+                    primaryStage.setScene(mainMenuScene);
+                    return;
+                }
+
+                // If bot completed a box, it gets another turn
+                if (boxCompleted > 0) {
+                    botPlayer.setGameState(lineDrawn, hLines, vLines, GRID_SIZE);
+                    botDelay.play();
+                } else {
+                    currentPlayer = player1;
+                    infoLabel.setText(currentPlayer.getName() + "'s turn");
+                    
+                    FadeTransition fade = new FadeTransition(Duration.millis(300), infoLabel);
+                    fade.setFromValue(0.5);
+                    fade.setToValue(1.0);
+                    fade.play();
+                }
+            }
+        }
+    }
+
+    private boolean validatePlayerNames(TextField p1Name, TextField p2Name, Button confirmButton, boolean isSinglePlayer) {
+        boolean isValid = !p1Name.getText().trim().isEmpty() && 
+                         (isSinglePlayer || !p2Name.getText().trim().isEmpty());
+        
+        confirmButton.setDisable(!isValid);
+        if (!isValid) {
+            confirmButton.setStyle("-fx-background-color: #CCCCCC; -fx-text-fill: #666666; " +
+                                 "-fx-font-size: 18px; -fx-padding: 15px 30px; -fx-background-radius: 25; " +
+                                 "-fx-font-weight: bold;");
+        } else {
+            confirmButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; " +
+                                 "-fx-font-size: 18px; -fx-padding: 15px 30px; -fx-background-radius: 25; " +
+                                 "-fx-font-weight: bold;");
+        }
+        return isValid;
     }
 }
