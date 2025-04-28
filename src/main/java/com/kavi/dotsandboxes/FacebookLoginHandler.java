@@ -46,7 +46,7 @@ public class FacebookLoginHandler extends NanoHTTPD {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+    } 
 
     private void fetchUserProfile(String accessToken) {
         try {
@@ -146,12 +146,87 @@ public class FacebookLoginHandler extends NanoHTTPD {
                     facebookToken = exchangeCodeForToken(code);
                     if (facebookToken != null) {
                         authenticateFacebookWithFirebase(facebookToken);
+                        // Return success HTML page
+                        String successHtml = "<!DOCTYPE html>" +
+                            "<html>" +
+                            "<head>" +
+                            "    <title>Login Successful</title>" +
+                            "    <style>" +
+                            "        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f0f2f5; }" +
+                            "        .container { max-width: 500px; margin: 0 auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }" +
+                            "        h1 { color: #1a73e8; }" +
+                            "        .success-icon { color: #34a853; font-size: 48px; margin-bottom: 20px; }" +
+                            "        .message { color: #202124; margin: 20px 0; }" +
+                            "        .close-button { background-color: #1a73e8; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }" +
+                            "        .close-button:hover { background-color: #1557b0; }" +
+                            "    </style>" +
+                            "</head>" +
+                            "<body>" +
+                            "    <div class='container'>" +
+                            "        <div class='success-icon'>✓</div>" +
+                            "        <h1>Login Successful!</h1>" +
+                            "        <p class='message'>You have successfully logged in to Dots and Boxes.</p>" +
+                            "        <p class='message'>You can now close this window and return to the game.</p>" +
+                            "        <button class='close-button' onclick='window.close()'>Close Window</button>" +
+                            "    </div>" +
+                            "</body>" +
+                            "</html>";
+                        return newFixedLengthResponse(Response.Status.OK, "text/html", successHtml);
                     } else {
-                        return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Failed to exchange code for access token.");
-                    }                 
-                    return newFixedLengthResponse(Response.Status.OK, "text/plain", "OAuth callback received. Code: " + code);
+                        // Return error HTML page
+                        String errorHtml = "<!DOCTYPE html>" +
+                            "<html>" +
+                            "<head>" +
+                            "    <title>Login Failed</title>" +
+                            "    <style>" +
+                            "        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f0f2f5; }" +
+                            "        .container { max-width: 500px; margin: 0 auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }" +
+                            "        h1 { color: #d93025; }" +
+                            "        .error-icon { color: #d93025; font-size: 48px; margin-bottom: 20px; }" +
+                            "        .message { color: #202124; margin: 20px 0; }" +
+                            "        .close-button { background-color: #d93025; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }" +
+                            "        .close-button:hover { background-color: #b7271f; }" +
+                            "    </style>" +
+                            "</head>" +
+                            "<body>" +
+                            "    <div class='container'>" +
+                            "        <div class='error-icon'>✗</div>" +
+                            "        <h1>Login Failed</h1>" +
+                            "        <p class='message'>Failed to exchange code for access token.</p>" +
+                            "        <p class='message'>Please try again later.</p>" +
+                            "        <button class='close-button' onclick='window.close()'>Close Window</button>" +
+                            "    </div>" +
+                            "</body>" +
+                            "</html>";
+                        return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/html", errorHtml);
+                    }
                 } else {
-                    return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/plain", "Missing 'code' parameter.");
+                    // Return error HTML page for missing code
+                    String errorHtml = "<!DOCTYPE html>" +
+                        "<html>" +
+                        "<head>" +
+                        "    <title>Login Failed</title>" +
+                        "    <style>" +
+                        "        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f0f2f5; }" +
+                        "        .container { max-width: 500px; margin: 0 auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }" +
+                        "        h1 { color: #d93025; }" +
+                        "        .error-icon { color: #d93025; font-size: 48px; margin-bottom: 20px; }" +
+                        "        .message { color: #202124; margin: 20px 0; }" +
+                        "        .close-button { background-color: #d93025; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }" +
+                        "        .close-button:hover { background-color: #b7271f; }" +
+                        "    </style>" +
+                        "</head>" +
+                        "<body>" +
+                        "    <div class='container'>" +
+                        "        <div class='error-icon'>✗</div>" +
+                        "        <h1>Login Failed</h1>" +
+                        "        <p class='message'>Missing authorization code.</p>" +
+                        "        <p class='message'>Please try again.</p>" +
+                        "        <button class='close-button' onclick='window.close()'>Close Window</button>" +
+                        "    </div>" +
+                        "</body>" +
+                        "</html>";
+                    return newFixedLengthResponse(Response.Status.BAD_REQUEST, "text/html", errorHtml);
                 }
             }
         }
