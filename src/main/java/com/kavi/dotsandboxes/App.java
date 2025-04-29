@@ -77,7 +77,7 @@ public class App extends Application implements LoginCallback{
     // This class defines the primary game elements for the Dots and Boxes game, 
     // including the stage, scenes, grid settings, players, UI elements, and game state tracking.
     private Stage primaryStage;
-    private Scene mainMenuScene;
+    private Scene mainMenuScene, optionScene;
     private static int GRID_SIZE = 7;
     private static String player1Name = "Player 1";
     private static String player2Name = "Player 2";
@@ -115,6 +115,7 @@ public class App extends Application implements LoginCallback{
     private Button soundToggleButton;
     private HBox userProfileBox;
     private Popup userProfilePopup;
+    private Button btnSoundToggleMainMenu, btnSoundToggleOptions, btnSoundToggleGame;
 
     // Main method to run the application
     // This method is the entry point for the JavaFX application.
@@ -179,9 +180,10 @@ public class App extends Application implements LoginCallback{
         Button quitButton = new Button("Exit");
         styleButton(quitButton, "#F44336", "#D32F2F");
 
+        optionScene = createOptionScene();
         playButton.setOnAction(event -> {
             soundManager.playSound("button");
-            primaryStage.setScene(optionScene());
+            primaryStage.setScene(optionScene);
             // updateAllSoundButtons();
         });
         
@@ -193,11 +195,7 @@ public class App extends Application implements LoginCallback{
         center.getChildren().addAll(titleLabel, subtitleLabel, playButton, quitButton);
 
         // Create or update sound toggle button
-        if (soundToggleButton == null) {
-            soundToggleButton = createSoundToggleButton();
-        } else {
-            soundToggleButton.setText(soundManager.isMuted() ? "🔇" : "🔊");
-        }
+        btnSoundToggleMainMenu = createSoundToggleButton();
 
         // Create or update Facebook login button if needed
         if (facebookLogin == null) {
@@ -276,13 +274,13 @@ public class App extends Application implements LoginCallback{
                                      "-fx-border-radius: 30; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
             });
             
-            topRight.getChildren().addAll(soundToggleButton, profileButton);
+            topRight.getChildren().addAll(btnSoundToggleMainMenu, profileButton);
         } else {
-            topRight.getChildren().addAll(soundToggleButton, facebookLogin);
+            topRight.getChildren().addAll(btnSoundToggleMainMenu, facebookLogin);
         }
 
         // root.setTop(topRight);
-        userProfileBox = new HBox(soundToggleButton, facebookLogin);
+        userProfileBox = new HBox(btnSoundToggleMainMenu, facebookLogin);
         userProfileBox.setAlignment(Pos.TOP_RIGHT);
         userProfileBox.setStyle("-fx-background-color: transparent; -fx-padding: 10;");
 
@@ -305,15 +303,15 @@ public class App extends Application implements LoginCallback{
                 if (profileButton == null) {
                     updateProfileButtonState();
                 }
-                userProfileBox.getChildren().addAll(soundToggleButton, profileButton);
+                userProfileBox.getChildren().addAll(btnSoundToggleMainMenu, profileButton);
             } else {
-                userProfileBox.getChildren().addAll(soundToggleButton, facebookLogin);
+                userProfileBox.getChildren().addAll(btnSoundToggleMainMenu, facebookLogin);
             }
         }
         
         // Update sound button state
-        if (soundToggleButton != null) {
-            soundToggleButton.setText(soundManager.isMuted() ? "🔇" : "🔊");
+        if (btnSoundToggleMainMenu != null) {
+            btnSoundToggleMainMenu.setText(soundManager.isMuted() ? "🔇" : "🔊");
         }
         
         primaryStage.setScene(mainMenuScene);
@@ -813,20 +811,20 @@ public class App extends Application implements LoginCallback{
         leaderboardStage.setScene(leaderboardScene);
         leaderboardStage.show();
 
-        // Add close button with sound
-        Button closeButton = new Button("Close");
-        styleButton(closeButton, "#F44336", "#D32F2F");
-        closeButton.setOnAction(e -> {
-            soundManager.playSound("button");
-            ((Stage) closeButton.getScene().getWindow()).close();
-        });
+        // // Add close button with sound
+        // Button closeButton = new Button("Close");
+        // styleButton(closeButton, "#F44336", "#D32F2F");
+        // closeButton.setOnAction(e -> {
+        //     soundManager.playSound("button");
+        //     ((Stage) closeButton.getScene().getWindow()).close();
+        // });
         
-        leaderboardContainer.getChildren().add(closeButton);
+        // leaderboardContainer.getChildren().add(closeButton);
     }
 
     // Create game settings scene
     // This method creates the game settings scene with text fields for entering player names and a combo box for selecting the grid size.
-    private Scene optionScene() {
+    private Scene createOptionScene() {
         BorderPane root = new BorderPane();
         VBox vBox = new VBox(30);
         vBox.setAlignment(Pos.CENTER);
@@ -834,13 +832,9 @@ public class App extends Application implements LoginCallback{
         vBox.setPadding(new Insets(0, 40, 40, 40));
 
         // Create or update sound toggle button
-        if (soundToggleButton == null) {
-            soundToggleButton = createSoundToggleButton();
-        } else {
-            soundToggleButton.setText(soundManager.isMuted() ? "🔇" : "🔊");
-        }
+        btnSoundToggleOptions = createSoundToggleButton();
 
-        HBox soundButtonContainer = new HBox(soundToggleButton);
+        HBox soundButtonContainer = new HBox(btnSoundToggleOptions);
         soundButtonContainer.setAlignment(Pos.TOP_RIGHT);
         soundButtonContainer.setPadding(new Insets(0, 0, 10, 0));
 
@@ -891,8 +885,8 @@ public class App extends Application implements LoginCallback{
         styleComboBox(gridField);
 
         ToggleGroup gameModeGroup = new ToggleGroup();
-        RadioButton singlePlayer = new RadioButton("Single Player");
-        RadioButton multiPlayer = new RadioButton("Multi Player");
+        RadioButton singlePlayer = new RadioButton("Play with Bot");
+        RadioButton multiPlayer = new RadioButton("Play Locally");
         singlePlayer.setToggleGroup(gameModeGroup);
         multiPlayer.setToggleGroup(gameModeGroup);
         multiPlayer.setSelected(true);
@@ -1118,11 +1112,7 @@ public class App extends Application implements LoginCallback{
         topBar.setStyle("-fx-background-color: rgba(0, 0, 0, 0.2); -fx-background-radius: 10;");
         
         // Create or update sound toggle button
-        if (soundToggleButton == null) {
-            soundToggleButton = createSoundToggleButton();
-        } else {
-            soundToggleButton.setText(soundManager.isMuted() ? "🔇" : "🔊");
-        }
+        btnSoundToggleGame = createSoundToggleButton();
 
         HBox playerInfo = new HBox(30); // Reduced spacing for better visual balance
         playerInfo.setAlignment(Pos.CENTER);
@@ -1158,7 +1148,7 @@ public class App extends Application implements LoginCallback{
         });
 
         // Add components to playerInfo with soundToggleButton first
-        playerInfo.getChildren().addAll(soundToggleButton, backButton, player1Box, infoLabel, player2Box);
+        playerInfo.getChildren().addAll(btnSoundToggleGame, backButton, player1Box, infoLabel, player2Box);
         topBar.getChildren().add(playerInfo);
 
         if (isSinglePlayer) {
@@ -1451,20 +1441,28 @@ public class App extends Application implements LoginCallback{
         button.setStyle("-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 24px;");
         button.setOnAction(event -> {
             soundManager.toggleMute();
-            String buttonText = soundManager.isMuted() ? "🔇" : "🔊";
-            if (soundToggleButton != null) {
-                soundToggleButton.setText(buttonText);
-            }
-            // updateAllSoundButtons();
-            soundManager.playSound("button");
+            soundManager.playSound(GameConstants.SOUND_BUTTON);
+            updateAllSoundButtons();
+
+            // String buttonText = soundManager.isMuted() ? "🔇" : "🔊";
+            // if (soundToggleButton != null) {
+            //     soundToggleButton.setText(buttonText);
+            // }
+            // soundManager.playSound("button");
         });
         return button;
     }
 
-    // private void updateAllSoundButtons() {
-        // String buttonText = soundManager.isMuted() ? "🔇" : "🔊";
-        // if (soundToggleButton != null) {
-        //     soundToggleButton.setText(buttonText);
-        // }
-    // }
+    private void updateAllSoundButtons() {
+        String buttonText = soundManager.isMuted() ? "🔇" : "🔊";
+        if (btnSoundToggleMainMenu != null) {
+            btnSoundToggleMainMenu.setText(buttonText);
+        }
+        if (btnSoundToggleOptions != null) {
+            btnSoundToggleOptions.setText(buttonText);
+        }
+        if (btnSoundToggleGame != null) {
+            btnSoundToggleGame.setText(buttonText);
+        }
+    }
 }
