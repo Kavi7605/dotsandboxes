@@ -123,21 +123,18 @@ public class App extends Application implements LoginCallback{
     @Override
     public void start(Stage primaryStage) {
         soundManager = SoundManager.getInstance();
-        // FirebaseInitializer.initialize();
         this.primaryStage = primaryStage;
-        mainMenuScene = createMainMenuScene();
+        mainMenuScene = createMainMenuScene(); // Store the created scene
         primaryStage.setTitle("Dots and Boxes"); 
         primaryStage.setScene(mainMenuScene);     
         primaryStage.setMaximized(true);
         primaryStage.show();
         primaryStage.setOnCloseRequest(event -> {
-            cleanupResources(); // Cleanup resources on close
+            cleanupResources();
         });
         primaryStage.getIcons().add(new Image("icon.png"));
     }
 
-    // Create main menu scene
-    // This method creates the main menu scene with the title, subtitle, and buttons for starting the game or exiting the application.
     private Scene createMainMenuScene() {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: linear-gradient(to bottom, #1a237e, #0d47a1);");
@@ -172,39 +169,6 @@ public class App extends Application implements LoginCallback{
         subtitleLabel.setTextFill(Color.rgb(255, 255, 255, 0.8));
         subtitleLabel.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
 
-        FacebookLogin = new Button("Login with Facebook");
-        FacebookLogin.setStyle("-fx-font-size: 16px; -fx-padding: 15px 30px; " +
-                            "-fx-background-color: #4267B2; -fx-text-fill: white; " +
-                            "-fx-background-radius: 25; -fx-font-weight: bold; " +
-                            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
-
-        ImageView facebookIcon = new ImageView(new Image("https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg"));
-        facebookIcon.setFitHeight(24);
-        facebookIcon.setFitWidth(24);
-        facebookIcon.setPreserveRatio(true);
-        FacebookLogin.setGraphic(facebookIcon);
-        FacebookLogin.setContentDisplay(ContentDisplay.CENTER);
-        FacebookLogin.setGraphicTextGap(10);
-
-        FacebookLogin.setOnMouseEntered(e -> {
-            FacebookLogin.setStyle("-fx-background-color: #3B5998; -fx-text-fill: white; " +
-                                "-fx-background-radius: 25; -fx-font-size: 16px; " +
-                                "-fx-padding: 15px 30px; -fx-font-weight: bold; " +
-                                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 15, 0, 0, 0);");
-        });
-
-        FacebookLogin.setOnMouseExited(e -> {
-            FacebookLogin.setStyle("-fx-background-color: #4267B2; -fx-text-fill: white; " +
-                                "-fx-background-radius: 25; -fx-font-size: 16px; " +
-                                "-fx-padding: 15px 30px; -fx-font-weight: bold; " +
-                                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
-        });
-
-        FacebookLogin.setOnAction(event -> {
-            soundManager.playSound("button");
-            startLoginProcess();
-        });
-
         Button playButton = new Button("Play Game");
         styleButton(playButton, "#4CAF50", "#388E3C");
 
@@ -214,7 +178,9 @@ public class App extends Application implements LoginCallback{
         playButton.setOnAction(event -> {
             soundManager.playSound("button");
             primaryStage.setScene(optionScene());
+            updateAllSoundButtons();
         });
+        
         quitButton.setOnAction(event -> {
             soundManager.playSound("button");
             cleanupResources();
@@ -222,25 +188,101 @@ public class App extends Application implements LoginCallback{
 
         center.getChildren().addAll(titleLabel, subtitleLabel, playButton, quitButton);
 
-        // Add sound toggle button
-        soundToggleButton = new Button("🔊");
-        soundToggleButton.setStyle("-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 24px;");
-        soundToggleButton.setOnAction(event -> {
-            soundManager.toggleMute();
+        // Create or update sound toggle button
+        if (soundToggleButton == null) {
+            soundToggleButton = createSoundToggleButton();
+        } else {
             soundToggleButton.setText(soundManager.isMuted() ? "🔇" : "🔊");
-            soundManager.playSound("button");
-        });
+        }
 
-        HBox topRight = new HBox(20, soundToggleButton, FacebookLogin);
+        // Create or update Facebook login button if needed
+        if (FacebookLogin == null) {
+            FacebookLogin = new Button("Login with Facebook");
+            FacebookLogin.setStyle("-fx-background-color: #3b5998; -fx-text-fill: white; " +
+                                "-fx-font-size: 16px; -fx-font-weight: bold; " +
+                                "-fx-padding: 12px 24px; -fx-background-radius: 25; " +
+                                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
+            
+            // Add Facebook icon
+            ImageView fbIcon = new ImageView(new Image("https://cdn-icons-png.flaticon.com/512/124/124010.png"));
+            fbIcon.setFitHeight(20);
+            fbIcon.setFitWidth(20);
+            FacebookLogin.setGraphic(fbIcon);
+            FacebookLogin.setContentDisplay(ContentDisplay.LEFT);
+            FacebookLogin.setGraphicTextGap(10);
+            
+            FacebookLogin.setOnMouseEntered(e -> {
+                FacebookLogin.setStyle("-fx-background-color: #2d4373; -fx-text-fill: white; " +
+                                     "-fx-font-size: 16px; -fx-font-weight: bold; " +
+                                     "-fx-padding: 12px 24px; -fx-background-radius: 25; " +
+                                     "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 15, 0, 0, 0);");
+            });
+            
+            FacebookLogin.setOnMouseExited(e -> {
+                FacebookLogin.setStyle("-fx-background-color: #3b5998; -fx-text-fill: white; " +
+                                     "-fx-font-size: 16px; -fx-font-weight: bold; " +
+                                     "-fx-padding: 12px 24px; -fx-background-radius: 25; " +
+                                     "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
+            });
+            
+            FacebookLogin.setOnAction(event -> {
+                soundManager.playSound("button");
+                // Show loading state
+                FacebookLogin.setDisable(true);
+                FacebookLogin.setText("Logging in...");
+                FacebookLogin.setStyle("-fx-background-color: #2d4373; -fx-text-fill: white; " +
+                                     "-fx-font-size: 16px; -fx-font-weight: bold; " +
+                                     "-fx-padding: 12px 24px; -fx-background-radius: 25; " +
+                                     "-fx-opacity: 0.8;");
+                startLoginProcess();
+            });
+        }
+
+        HBox topRight = new HBox(20);
         topRight.setAlignment(Pos.TOP_RIGHT);
         topRight.setPadding(new Insets(20));
+        topRight.setStyle("-fx-background-color: rgba(0, 0, 0, 0.1); -fx-background-radius: 15;");
+
+        if (isLoggedIn && profileButton != null) {
+            // Enhanced profile button styling
+            profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
+                                 "-fx-padding: 8; -fx-background-radius: 30; " +
+                                 "-fx-border-color: white; -fx-border-width: 2; " +
+                                 "-fx-border-radius: 30; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
+            
+            profileButton.setOnMouseEntered(e -> {
+                profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.3); " +
+                                     "-fx-padding: 8; -fx-background-radius: 30; " +
+                                     "-fx-border-color: white; -fx-border-width: 2; " +
+                                     "-fx-border-radius: 30; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 15, 0, 0, 0);");
+            });
+            
+            profileButton.setOnMouseExited(e -> {
+                profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
+                                     "-fx-padding: 8; -fx-background-radius: 30; " +
+                                     "-fx-border-color: white; -fx-border-width: 2; " +
+                                     "-fx-border-radius: 30; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
+            });
+            
+            topRight.getChildren().addAll(soundToggleButton, profileButton);
+        } else {
+            topRight.getChildren().addAll(soundToggleButton, FacebookLogin);
+        }
 
         root.setTop(topRight);
         root.setCenter(center);
 
-        return new Scene(root, screenSize.getWidth(), screenSize.getHeight());
+        Scene scene = new Scene(root, screenSize.getWidth(), screenSize.getHeight());
+        mainMenuScene = scene; // Update the reference
+        return scene;
     }
 
+    private void returnToMainMenu() {
+        // Update the main menu scene
+        mainMenuScene = createMainMenuScene();
+        primaryStage.setScene(mainMenuScene);
+        updateAllSoundButtons();
+    }
 
     private void startLoginProcess() {
         // Disable the login button
@@ -273,18 +315,41 @@ public class App extends Application implements LoginCallback{
     public void onLoginFailed(String errorMessage) {
         System.out.println("Login failed: " + errorMessage);
         Platform.runLater(() -> {
-            // StackPane root = (StackPane) primaryStage.getScene().getRoot();
-            // root.getChildren().removeAll(dimOverlay, loadingBox);
             if (loginTimer != null) {
                 loginTimer.stop();
             }
             handleLoginTimeout();
 
+            // Reset Facebook login button
+            FacebookLogin.setDisable(false);
+            FacebookLogin.setText("Login with Facebook");
+            FacebookLogin.setStyle("-fx-background-color: #3b5998; -fx-text-fill: white; " +
+                                 "-fx-font-size: 16px; -fx-font-weight: bold; " +
+                                 "-fx-padding: 12px 24px; -fx-background-radius: 25; " +
+                                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
+
+            // Enhanced error alert
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Login Failed");
-            alert.setHeaderText(null);
-            alert.setContentText("Error: " + errorMessage);
-            alert.showAndWait();
+            alert.setHeaderText("Unable to Login");
+            alert.setContentText("Please try again. Error: " + errorMessage);
+            
+            // Style the alert
+            alert.getDialogPane().setStyle("-fx-background-color: #1a237e;");
+            alert.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white; -fx-font-size: 14px;");
+            alert.getDialogPane().lookup(".header-panel").setStyle("-fx-background-color: #1a237e;");
+            alert.getDialogPane().lookup(".header-panel .label").setStyle("-fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold;");
+            
+            // Add retry button
+            ButtonType retryButton = new ButtonType("Retry", ButtonData.OK_DONE);
+            alert.getButtonTypes().setAll(retryButton, ButtonType.CANCEL);
+            
+            alert.showAndWait().ifPresent(response -> {
+                if (response == retryButton) {
+                    startLoginProcess();
+                }
+            });
+            
             facebookLoginServer.stop();
         });
     }
@@ -293,8 +358,6 @@ public class App extends Application implements LoginCallback{
     public void onLoginSuccessful() {
         System.out.println("Login successful!");
         Platform.runLater(() -> {
-            // StackPane root = (StackPane) primaryStage.getScene().getRoot();
-            // root.getChildren().removeAll(dimOverlay, loadingBox);
             if (loginTimer != null) {
                 loginTimer.stop();
             }
@@ -302,10 +365,18 @@ public class App extends Application implements LoginCallback{
             isLoggedIn = true;
             updateProfileButton();
             
+            // Enhanced success alert
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Login Successful");
-            alert.setHeaderText(null);
-            alert.setContentText("Welcome, " + currentUserProfile.getName() + "!");
+            alert.setHeaderText("Welcome to Dots and Boxes!");
+            alert.setContentText("Welcome, " + currentUserProfile.getName() + "!\nYou can now access your friends list and leaderboard.");
+            
+            // Style the alert
+            alert.getDialogPane().setStyle("-fx-background-color: #1a237e;");
+            alert.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white; -fx-font-size: 14px;");
+            alert.getDialogPane().lookup(".header-panel").setStyle("-fx-background-color: #1a237e;");
+            alert.getDialogPane().lookup(".header-panel .label").setStyle("-fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold;");
+            
             alert.showAndWait();
             facebookLoginServer.stop();
         });
@@ -333,15 +404,15 @@ public class App extends Application implements LoginCallback{
                 profileButton = new Button();
                 profileButton.setGraphic(profileImageView);
                 profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
-                                         "-fx-padding: 10; -fx-background-radius: 30; " +
-                                         "-fx-border-color: white; -fx-border-width: 2; " +
-                                         "-fx-border-radius: 30;");
+                                     "-fx-padding: 10; -fx-background-radius: 30; " +
+                                     "-fx-border-color: white; -fx-border-width: 2; " +
+                                     "-fx-border-radius: 30;");
                 profileButton.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
     
                 // Enhanced tooltip with user info
                 Tooltip tooltip = new Tooltip();
                 tooltip.setStyle("-fx-font-size: 14px; -fx-background-color: rgba(0, 0, 0, 0.8); " +
-                                 "-fx-text-fill: white; -fx-padding: 10px;");
+                               "-fx-text-fill: white; -fx-padding: 10px;");
                 tooltip.setText("Name: " + currentUserProfile.getName() + "\nEmail: " + currentUserProfile.getEmail());
                 profileButton.setTooltip(tooltip);
     
@@ -386,11 +457,14 @@ public class App extends Application implements LoginCallback{
                 // Show context menu on button click
                 profileButton.setOnAction(e -> profileMenu.show(profileButton, Side.BOTTOM, 0, 0));
     
-                // Add profile button to the top right corner of the scene
+                // Update the top right corner with both sound toggle and profile button
                 BorderPane mainLayout = (BorderPane) mainMenuScene.getRoot();
-                mainLayout.setTop (profileButton);
-                mainLayout.getChildren().remove(FacebookLogin);
-                BorderPane.setAlignment(profileButton, Pos.TOP_RIGHT);
+                HBox topRight = (HBox) mainLayout.getTop();
+                
+                // Clear existing children and add both buttons
+                topRight.getChildren().clear();
+                topRight.getChildren().addAll(soundToggleButton, profileButton);
+                
             } catch (Exception e) {
                 System.out.println("Error loading profile picture: " + e.getMessage());
                 e.printStackTrace();
@@ -407,16 +481,18 @@ public class App extends Application implements LoginCallback{
                 profileButton = new Button();
                 profileButton.setGraphic(defaultProfileImageView);
                 profileButton.setStyle("-fx-background-color: rgba(255, 255, 255, 0.2); " +
-                                         "-fx-padding: 10; -fx-background-radius: 30; " +
-                                         "-fx-border-color: white; -fx-border-width: 2; " +
-                                         "-fx-border-radius: 30;");
+                                     "-fx-padding: 10; -fx-background-radius: 30; " +
+                                     "-fx-border-color: white; -fx-border-width: 2; " +
+                                     "-fx-border-radius: 30;");
                 profileButton.setEffect(new DropShadow(10, Color.rgb(0, 0, 0, 0.3)));
     
-                // Add profile button to the top right corner of the scene
+                // Update the top right corner with both sound toggle and profile button
                 BorderPane mainLayout = (BorderPane) mainMenuScene.getRoot();
-                mainLayout.setTop(profileButton);
-                mainLayout.getChildren().remove(FacebookLogin);
-                BorderPane.setAlignment(profileButton, Pos.TOP_RIGHT);
+                HBox topRight = (HBox) mainLayout.getTop();
+                
+                // Clear existing children and add both buttons
+                topRight.getChildren().clear();
+                topRight.getChildren().addAll(soundToggleButton, profileButton);
             }
         }
     }
@@ -665,7 +741,14 @@ public class App extends Application implements LoginCallback{
         VBox vBox = new VBox(30);
         vBox.setAlignment(Pos.CENTER);
         vBox.setStyle("-fx-background-color: linear-gradient(to bottom, #1a237e, #0d47a1);");
-        vBox.setPadding(new Insets(40));
+        vBox.setPadding(new Insets(0, 40, 40, 40));
+
+        // Create sound toggle button
+        soundToggleButton = createSoundToggleButton();
+
+        HBox soundButtonContainer = new HBox(soundToggleButton);
+        soundButtonContainer.setAlignment(Pos.TOP_RIGHT);
+        soundButtonContainer.setPadding(new Insets(0, 0, 10, 0));
 
         Label titleLabel = new Label("Game Settings");
         titleLabel.setFont(Font.font("Arial", FontWeight.BOLD, 36));
@@ -787,7 +870,7 @@ public class App extends Application implements LoginCallback{
         styleButton(backButton, "#2196F3", "#1976D2");
         backButton.setOnAction(event -> {
             soundManager.playSound("button");
-            primaryStage.setScene(mainMenuScene);
+            returnToMainMenu();
         });
 
         HBox buttonBox = new HBox(20);
@@ -809,7 +892,8 @@ public class App extends Application implements LoginCallback{
         grid.add(gameModeBox, 1, 3);
         grid.add(difficultyComboBox, 1, 4);
 
-        vBox.getChildren().addAll(titleLabel, grid, buttonBox);
+        // Add components to vBox in correct order
+        vBox.getChildren().addAll(soundButtonContainer, titleLabel, grid, buttonBox);
         root.setCenter(vBox);
 
         return new Scene(root, screenSize.getWidth(), screenSize.getHeight());
@@ -860,12 +944,13 @@ public class App extends Application implements LoginCallback{
         // Store the original action
         EventHandler<ActionEvent> originalAction = button.getOnAction();
         
-        // Set new action that plays sound and then executes original action
         button.setOnAction(event -> {
             soundManager.playSound("button");
             if (originalAction != null) {
                 originalAction.handle(event);
             }
+            // Update sound button state after scene changes
+            updateAllSoundButtons();
         });
     }
 
@@ -932,14 +1017,16 @@ public class App extends Application implements LoginCallback{
         }
 
         BorderPane borderPane = new BorderPane();
-        // Enhanced background with animated gradient
         borderPane.setStyle("-fx-background-color: linear-gradient(to bottom, #1a237e, #0d47a1);");
         
         VBox topBar = new VBox(10);
         topBar.setPadding(new Insets(20));
         topBar.setStyle("-fx-background-color: rgba(0, 0, 0, 0.2); -fx-background-radius: 10;");
 
-        HBox playerInfo = new HBox(40);
+        // Create sound toggle button
+        soundToggleButton = createSoundToggleButton();
+
+        HBox playerInfo = new HBox(30); // Reduced spacing for better visual balance
         playerInfo.setAlignment(Pos.CENTER);
 
         VBox player1Box = new VBox(5);
@@ -955,7 +1042,6 @@ public class App extends Application implements LoginCallback{
         player1ScoreLabel.setTextFill(player1.getColor());
         player2ScoreLabel.setTextFill(player2.getColor());
         
-        // Add glow effect to score labels
         player1ScoreLabel.setEffect(new Glow(10));
         player2ScoreLabel.setEffect(new Glow(10));
         
@@ -969,22 +1055,13 @@ public class App extends Application implements LoginCallback{
         Button backButton = new Button("←");
         styleButton(backButton, "#2196F3", "#1976D2");
         backButton.setOnAction(event -> {
-            primaryStage.setScene(mainMenuScene);
             soundManager.playSound("button");
+            returnToMainMenu();
         });
 
-
-        playerInfo.getChildren().addAll(backButton, player1Box, infoLabel, player2Box);
+        // Add components to playerInfo with soundToggleButton first
+        playerInfo.getChildren().addAll(soundToggleButton, backButton, player1Box, infoLabel, player2Box);
         topBar.getChildren().add(playerInfo);
-
-        HBox gameBoard = new HBox();
-        gameBoard.setAlignment(Pos.CENTER);
-        gameBoard.getChildren().add(gridPane);
-
-        borderPane.setTop(topBar);
-        borderPane.setCenter(gameBoard);
-
-        updateScores();
 
         if (isSinglePlayer) {
             botPlayer = new BotPlayer("Bot", Color.rgb(85, 170, 255), botDifficulty);
@@ -994,26 +1071,39 @@ public class App extends Application implements LoginCallback{
             botThinkingLabel = new Label("Bot is thinking...");
             botThinkingLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
             botThinkingLabel.setTextFill(Color.WHITE);
-            botThinkingLabel.setVisible(false);
             
             botThinkingIndicator = new ProgressIndicator();
-            botThinkingIndicator.setVisible(false);
+            botThinkingIndicator.setPrefSize(20, 20); // Set a specific size
             botThinkingIndicator.setStyle("-fx-progress-color: white;");
             
             HBox botThinkingBox = new HBox(10, botThinkingIndicator, botThinkingLabel);
             botThinkingBox.setAlignment(Pos.CENTER);
-            botThinkingBox.setVisible(false);
+            botThinkingBox.setPadding(new Insets(10, 0, 0, 0));
             
+            // Initially hide the thinking indicator
+            botThinkingIndicator.setVisible(false);
+            botThinkingLabel.setVisible(false);
+            
+            // Add bot thinking box after player info
             topBar.getChildren().add(botThinkingBox);
             
-            // Initialize bot delay
-            botDelay = new PauseTransition(Duration.seconds(1 + Math.random() * 0.5));
+            // Initialize bot delay with proper visibility handling
+            botDelay = new PauseTransition(Duration.seconds(1));
             botDelay.setOnFinished(event -> {
+                botThinkingIndicator.setVisible(false);
+                botThinkingLabel.setVisible(false);
                 makeBotMove();
-                botThinkingBox.setVisible(false);
             });
         }
 
+        HBox gameBoard = new HBox();
+        gameBoard.setAlignment(Pos.CENTER);
+        gameBoard.getChildren().add(gridPane);
+
+        borderPane.setTop(topBar);
+        borderPane.setCenter(gameBoard);
+
+        updateScores();
         return new Scene(borderPane, screenSize.getWidth(), screenSize.getHeight());
     }
 
@@ -1093,7 +1183,7 @@ public class App extends Application implements LoginCallback{
                     alert.getDialogPane().setStyle("-fx-background-color: #1a237e;");
                     alert.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
                     alert.showAndWait();
-                    primaryStage.setScene(mainMenuScene);
+                    returnToMainMenu();
                 });
             }
         });
@@ -1168,6 +1258,10 @@ public class App extends Application implements LoginCallback{
 
     private void makeBotMove() {
         if (botPlayer != null && currentPlayer == botPlayer) {
+            // Show thinking indicator before making move
+            botThinkingIndicator.setVisible(true);
+            botThinkingLabel.setVisible(true);
+            
             Line botMove = botPlayer.makeMove();
             if (botMove != null) {
                 soundManager.playSound("line");
@@ -1185,7 +1279,11 @@ public class App extends Application implements LoginCallback{
                 updateScores();
                 boxCounter -= boxCompleted;
                 
-                if(boxCounter < 1) {
+                if (boxCounter < 1) {
+                    // Hide thinking indicator before game over
+                    botThinkingIndicator.setVisible(false);
+                    botThinkingLabel.setVisible(false);
+                    
                     final String winMsg;
                     if (player1.getScore() > player2.getScore()) {
                         winMsg = player1Name + " Wins!!";
@@ -1198,7 +1296,6 @@ public class App extends Application implements LoginCallback{
                         soundManager.playSound("tie");
                     }
                     
-                    // Use Platform.runLater to show alert after animation
                     Platform.runLater(() -> {
                         Alert alert = new Alert(AlertType.INFORMATION, winMsg, new ButtonType("Back to Main Menu"));
                         alert.setTitle("Game Over");
@@ -1207,15 +1304,20 @@ public class App extends Application implements LoginCallback{
                         alert.getDialogPane().setStyle("-fx-background-color: #1a237e;");
                         alert.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
                         alert.showAndWait();
-                        primaryStage.setScene(mainMenuScene);
+                        returnToMainMenu();
                     });
                     return;
                 }
 
                 if (boxCompleted > 0) {
                     botPlayer.setGameState(lineDrawn, hLines, vLines, GRID_SIZE);
+                    // Keep thinking indicator visible for next move
                     botDelay.play();
                 } else {
+                    // Hide thinking indicator when switching to player's turn
+                    botThinkingIndicator.setVisible(false);
+                    botThinkingLabel.setVisible(false);
+                    
                     currentPlayer = player1;
                     infoLabel.setText(currentPlayer.getName() + "'s turn");
                     
@@ -1243,5 +1345,24 @@ public class App extends Application implements LoginCallback{
                                  "-fx-font-weight: bold;");
         }
         return isValid;
+    }
+
+    // Add this helper method to create consistent soundToggleButton
+    private Button createSoundToggleButton() {
+        Button button = new Button(soundManager.isMuted() ? "🔇" : "🔊");
+        button.setStyle("-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 24px;");
+        button.setOnAction(event -> {
+            soundManager.toggleMute();
+            updateAllSoundButtons();
+            soundManager.playSound("button");
+        });
+        return button;
+    }
+
+    private void updateAllSoundButtons() {
+        String buttonText = soundManager.isMuted() ? "🔇" : "🔊";
+        if (soundToggleButton != null) {
+            soundToggleButton.setText(buttonText);
+        }
     }
 }
