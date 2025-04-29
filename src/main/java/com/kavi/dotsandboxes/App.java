@@ -227,7 +227,6 @@ public class App extends Application implements LoginCallback{
             
             FacebookLogin.setOnAction(event -> {
                 soundManager.playSound("button");
-                // Show loading state
                 FacebookLogin.setDisable(true);
                 FacebookLogin.setText("Logging in...");
                 FacebookLogin.setStyle("-fx-background-color: #2d4373; -fx-text-fill: white; " +
@@ -441,7 +440,10 @@ public class App extends Application implements LoginCallback{
                 logoutItem.setGraphic(logoutIcon);
     
                 // Style menu items
-                String menuItemStyle = "-fx-font-size: 14px; -fx-padding: 10px 20px; -fx-background-color: #D3D3D3;";
+                String menuItemStyle = "-fx-font-size: 14px; -fx-padding: 10px 20px; " +
+                                     "-fx-background-color: #2C3E50; -fx-text-fill: white; " + 
+                                     "-fx-background-radius: 5; -fx-cursor: hand; " +
+                                     "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 5, 0, 0, 1);";
                 friendsItem.setStyle(menuItemStyle);
                 leaderboardItem.setStyle(menuItemStyle);
                 logoutItem.setStyle(menuItemStyle);
@@ -501,15 +503,81 @@ public class App extends Application implements LoginCallback{
         soundManager.playSound("button");
         isLoggedIn = false;
         currentUserProfile = null;
-        facebookLoginServer = null;
         
-        // Remove profile button and add back Facebook login button
-        BorderPane center = (BorderPane) mainMenuScene.getRoot();
-        center.getChildren().remove(profileButton);
-
-        center.getChildren().add(FacebookLogin);
-        FacebookLogin.setVisible(true);
-        FacebookLogin.setDisable(false);
+        // Stop and cleanup Facebook login server
+        if (facebookLoginServer != null) {
+            facebookLoginServer.stop();
+            facebookLoginServer = null;
+        }
+        
+        // Reset Facebook login button
+        FacebookLogin = new Button("Login with Facebook");
+        FacebookLogin.setStyle("-fx-background-color: #3b5998; -fx-text-fill: white; " +
+                             "-fx-font-size: 16px; -fx-font-weight: bold; " +
+                             "-fx-padding: 12px 24px; -fx-background-radius: 25; " +
+                             "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
+        
+        // Add Facebook icon
+        ImageView fbIcon = new ImageView(new Image("https://cdn-icons-png.flaticon.com/512/124/124010.png"));
+        fbIcon.setFitHeight(20);
+        fbIcon.setFitWidth(20);
+        FacebookLogin.setGraphic(fbIcon);
+        FacebookLogin.setContentDisplay(ContentDisplay.LEFT);
+        FacebookLogin.setGraphicTextGap(10);
+        
+        FacebookLogin.setOnMouseEntered(e -> {
+            FacebookLogin.setStyle("-fx-background-color: #2d4373; -fx-text-fill: white; " +
+                                 "-fx-font-size: 16px; -fx-font-weight: bold; " +
+                                 "-fx-padding: 12px 24px; -fx-background-radius: 25; " +
+                                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 15, 0, 0, 0);");
+        });
+        
+        FacebookLogin.setOnMouseExited(e -> {
+            FacebookLogin.setStyle("-fx-background-color: #3b5998; -fx-text-fill: white; " +
+                                 "-fx-font-size: 16px; -fx-font-weight: bold; " +
+                                 "-fx-padding: 12px 24px; -fx-background-radius: 25; " +
+                                 "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 0);");
+        });
+        
+        FacebookLogin.setOnAction(event -> {
+            soundManager.playSound("button");
+            FacebookLogin.setDisable(true);
+            FacebookLogin.setText("Logging in...");
+            FacebookLogin.setStyle("-fx-background-color: #2d4373; -fx-text-fill: white; " +
+                                 "-fx-font-size: 16px; -fx-font-weight: bold; " +
+                                 "-fx-padding: 12px 24px; -fx-background-radius: 25; " +
+                                 "-fx-opacity: 0.8;");
+            startLoginProcess();
+        });
+        
+        // Get the current scene's root
+        BorderPane root = (BorderPane) primaryStage.getScene().getRoot();
+        
+        // Create new top right container
+        HBox topRight = new HBox(20);
+        topRight.setAlignment(Pos.TOP_RIGHT);
+        topRight.setPadding(new Insets(20));
+        topRight.setStyle("-fx-background-color: rgba(0, 0, 0, 0.1); -fx-background-radius: 15;");
+        
+        // Add sound toggle button and Facebook login button
+        topRight.getChildren().addAll(soundToggleButton, FacebookLogin);
+        
+        // Update the scene
+        root.setTop(topRight);
+        
+        // Show logout success message
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Logout Successful");
+        alert.setHeaderText("Logged Out");
+        alert.setContentText("You have been successfully logged out.");
+        
+        // Style the alert
+        alert.getDialogPane().setStyle("-fx-background-color: #1a237e;");
+        alert.getDialogPane().lookup(".content.label").setStyle("-fx-text-fill: white; -fx-font-size: 14px;");
+        alert.getDialogPane().lookup(".header-panel").setStyle("-fx-background-color: #1a237e;");
+        alert.getDialogPane().lookup(".header-panel .label").setStyle("-fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold;");
+        
+        alert.showAndWait();
     }
 
     private void showFriendsList() {
